@@ -1,12 +1,9 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
-	"os"
+	"crossfhir/internal"
+	"sync"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/spf13/cobra"
 )
 
@@ -22,34 +19,38 @@ func FetchCmd() *cobra.Command {
 
 func FetchData(cmd *cobra.Command, args []string) error {
 
+	// todo : parametrize
 	bucket := "test-fhir-sandbox-synthea-bucket20241011071523475200000001"
 	prefix := "8699accb152044514abe6bcc49744168-FHIR_EXPORT-28ee898ca886e56a0a28ef73ad75c370/"
+	localPath := "./data"
 
-	outputFile := "export_data"
-
-	result, err := s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
+	objects, err := internal.ListPrefixObjects(s3Client, bucket, prefix)
 	if err != nil {
-		fmt.Println("Error getting object from S3:", err)
-	}
-	defer result.Body.Close()
-
-	// Create a file to write the S3 object data
-	outFile, err := os.Create(outputFile)
-	if err != nil {
-		fmt.Println("Error creating file:", err)
-	}
-	defer outFile.Close()
-
-	// Write the content to the file
-	_, err = outFile.ReadFrom(result.Body)
-	if err != nil {
-		fmt.Println("Error writing object to file:", err)
+		return err
 	}
 
-	fmt.Printf("Successfully downloaded %s from S3 bucket %s to local file %s\n", key, bucket, outputFile)
+	// check number of goroutines
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(objects))
+
+	for _, object := range objects {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := internal.DownloadS3Object(s3Client, bucket, *object.Key, localPath); err != nil {
+				errChan <- err
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"crossfhir/internal"
+	"fmt"
 	"log"
 	"os"
 
@@ -28,8 +30,16 @@ func Execute() {
 	rootCmd.AddCommand(ExportCmd())
 	rootCmd.AddCommand(DescribeCmd())
 	rootCmd.AddCommand(FetchCmd())
+	rootCmd.AddCommand(ConvertCmd())
 
 	err := rootCmd.Execute()
+
+	conn, err := internal.InitConnection()
+
+	var res int
+	err = conn.QueryRow(context.Background(), "select 1").Scan(&res)
+
+	fmt.Println(res)
 
 	if err != nil {
 		os.Exit(1)

@@ -1,0 +1,5 @@
+[
+  "CREATE EXTENSION IF NOT EXISTS pgcrypto;",
+  "DO $$\nBEGIN\n    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'resource_status') THEN\n       CREATE TYPE resource_status AS ENUM ('created', 'updated', 'deleted', 'recreated');\n    END IF;\nEND\n$$;",
+  "CREATE TABLE IF NOT EXISTS \"patient\" (\n  id text primary key,\n  txid bigint not null,\n  ts timestamptz DEFAULT current_timestamp,\n  resource_type text default 'Patient',\n  status resource_status not null,\n  resource jsonb not null\n);"
+]

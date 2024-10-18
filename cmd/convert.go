@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -22,9 +24,25 @@ func ConvertCmd() *cobra.Command {
 }
 
 func Convert(cmd *cobra.Command, args []string) error {
-	// for each file in data directory read file, convert to json
+	dataPath := "data"
 
-	f, err := os.ReadFile("tmp/test.ndjson")
+	files, err := os.ReadDir(dataPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() {
+			filePath := dataPath + "/" + file.Name()
+			processFile(filePath, file.Name())
+		}
+	}
+
+	return nil
+}
+
+func processFile(filePath string, fileName string) {
+	f, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,19 +59,50 @@ func Convert(cmd *cobra.Command, args []string) error {
 			break
 		}
 
-		outputFile, err := os.OpenFile("output.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		processJSONObject(v, fileName)
+	}
+}
 
-		if err != nil {
-			log.Fatal(err)
-		}
+func processJSONObject(v interface{}, fileName string) {
+	var resourceMap map[string]interface{}
+	var txid string
 
-		defer outputFile.Close()
+	parts := strings.Split(fileName, "-")
 
-		encoder := json.NewEncoder(outputFile)
-		if err := encoder.Encode(v); err != nil {
-			log.Fatal(err)
-		}
+	if len(parts) >= 2 {
+		txid = parts[1]
+	} else {
+		log.Fatal("Invalid file name format - txid not found")
 	}
 
-	return nil
+	resourceJSON, err := json.Marshal(v)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = json.Unmarshal(resourceJSON, &resourceMap)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tableName := resourceMap["resourceType"].(string)
+
+	query := fmt.Sprintf(`
+			INSERT INTO %s (id, txid, status, resource)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (id) DO UPDATE SET
+				txid = EXCLUDED.txid,
+				status = EXCLUDED.status,
+				resource = EXCLUDED.resource
+	`, tableName)
+
+	_, err = pgConn.Exec(context.Background(), query, resourceMap["id"], txid, "created", resourceJSON)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// var res string
+	// pgConn.QueryRow(context.Background(), "select resource from patient limit 1").Scan(&res)
+	// internal.PrintJSON(res)
+
 }

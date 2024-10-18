@@ -2,8 +2,10 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -34,4 +36,31 @@ func InitConnection() (*pgx.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+func RunFhirMigration(conn *pgx.Conn) error {
+	// parametrize
+	schema := "fhir.json"
+
+	var commands []string
+
+	data, err := os.ReadFile(schema)
+	if err != nil {
+		log.Fatalf("failed to read schema file: %v", err)
+	}
+
+	err = json.Unmarshal(data, &commands)
+	if err != nil {
+		log.Fatalf("failed to unmarshal schema: %v", err)
+	}
+
+	for _, sql := range commands {
+		_, err = conn.Exec(context.Background(), sql)
+
+		if err != nil {
+			log.Fatalf("failed to exec query: %v", err)
+		}
+	}
+
+	return nil
 }

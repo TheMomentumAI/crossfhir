@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"crossfhir/internal"
-	"fmt"
 	"log"
 	"os"
 
@@ -11,12 +10,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/healthlake"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
 var healthlakeClient *healthlake.Client
 var s3Client *s3.Client
+var pgConn *pgx.Conn
 
 var rootCmd = &cobra.Command{
 	Use:   "crossfhir",
@@ -24,8 +25,13 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	LoadEnv()         // load and set up envs
-	ConfigAWSClient() // set up AWS config
+	LoadEnv()
+	ConfigAWSClient()
+
+	pgConn, _ = internal.InitConnection()
+	internal.RunFhirMigration(pgConn)
+
+	// internal.ExecQuery(pgConn, "SELECT id FROM patient")
 
 	rootCmd.AddCommand(ExportCmd())
 	rootCmd.AddCommand(DescribeCmd())
@@ -33,13 +39,11 @@ func Execute() {
 	rootCmd.AddCommand(ConvertCmd())
 
 	err := rootCmd.Execute()
+	if err != nil {
+		log.Fatalf("Error executing command: %v", err)
+	}
 
-	conn, err := internal.InitConnection()
-
-	var res int
-	err = conn.QueryRow(context.Background(), "select 1").Scan(&res)
-
-	fmt.Println(res)
+	defer pgConn.Close(context.Background())
 
 	if err != nil {
 		os.Exit(1)

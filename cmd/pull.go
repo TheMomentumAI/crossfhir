@@ -2,9 +2,14 @@ package cmd
 
 import (
 	"crossfhir/internal"
+	"log"
 	"sync"
 
 	"github.com/spf13/cobra"
+)
+
+var (
+	s3Url string
 )
 
 func PullCmd() *cobra.Command {
@@ -14,30 +19,34 @@ func PullCmd() *cobra.Command {
 		RunE:  Pull,
 	}
 
+	PullCmd.Flags().StringVarP(&s3Url, "url", "u", "", "Directory to save FHIR exported data")
+	PullCmd.Flags().StringVarP(&dir, "dir", "d", "./fhir-data", "Directory to save FHIR exported data")
+
 	return PullCmd
 }
 
 func Pull(cmd *cobra.Command, args []string) error {
-
 	PullFhirData()
 
 	return nil
 }
 
 func PullFhirData() error {
-	// todo : parametrize
-	bucket := cfg.AwsS3Bucket
+	if s3Url != "" {
+		cfg.AwsExportJobS3Output = s3Url
+	}
 
-	// how to get this from sdk
-	prefix := "8699accb152044514abe6bcc49744168-FHIR_EXPORT-28ee898ca886e56a0a28ef73ad75c370/"
-	localPath := "./data"
+	outputS3Url := cfg.AwsExportJobS3Output
 
+	bucket, prefix := internal.ParseS3Url(outputS3Url)
 	objects, err := internal.ListPrefixObjects(s3Client, bucket, prefix)
+
+	log.Printf("Downloading %d FHIR data objects from S3 to local directory %s", len(objects), dir)
+
 	if err != nil {
 		return err
 	}
 
-	// check number of goroutines
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(objects))
 
@@ -45,7 +54,7 @@ func PullFhirData() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := internal.DownloadS3Object(s3Client, bucket, *object.Key, localPath); err != nil {
+			if err := internal.DownloadS3Object(s3Client, bucket, *object.Key, dir); err != nil {
 				errChan <- err
 			}
 		}()
@@ -59,6 +68,8 @@ func PullFhirData() error {
 			return err
 		}
 	}
+
+	log.Printf("Downloaded FHIR data.")
 
 	return nil
 }

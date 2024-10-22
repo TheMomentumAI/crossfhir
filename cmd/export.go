@@ -13,7 +13,6 @@ import (
 
 var (
 	pull bool
-	dir  string
 )
 
 func ExportCmd() *cobra.Command {
@@ -95,6 +94,15 @@ func DescribeProgress() error {
 	}
 
 	log.Printf("Job - %v - Completed\n", cfg.AwsExportJobName)
+
+	if pull {
+		log.Println("Pulling FHIR data")
+		
+		err := PullFhirData()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

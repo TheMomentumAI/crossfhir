@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"crossfhir/internal"
+	// "crossfhir/internal"
 	"fmt"
 	"log"
 	"os"
@@ -21,6 +21,8 @@ var (
 	s3Client         *s3.Client
 	pgConn           *pgx.Conn
 	cfg              Config
+	dir              string
+	verbose          bool
 )
 
 type Config struct {
@@ -49,22 +51,24 @@ func Execute() {
 	LoadEnv()
 	ConfigAWSClient()
 
-	pgConn, _ = internal.InitConnection()
+	// pgConn, _ = internal.InitConnection()
 
 	// internal.RunFhirMigration(pgConn)
 
 	// internal.ExecQuery(pgConn, "SELECT id FROM patient")
 
+
 	rootCmd.AddCommand(ExportCmd())
 	rootCmd.AddCommand(PullCmd())
 	rootCmd.AddCommand(ConvertCmd())
 
+	
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatalf("Error executing command: %v", err)
 	}
 
-	defer pgConn.Close(context.Background())
+	// defer pgConn.Close(context.Background())
 
 	if err != nil {
 		os.Exit(1)
@@ -125,7 +129,7 @@ func ValidateEnvs(missingEnvVars []string) []string {
 		missingEnvVars = append(missingEnvVars, "AWS_DATASTORE_ID")
 	}
 
-	cfg.AwsKmsKeyId = os.Getenv("AWS_KMS_KEY_ID")
+	cfg.AwsKmsKeyId = os.Getenv("AWS_KMS_KEY_ID_ARN")
 	if cfg.AwsKmsKeyId == "" {
 		missingEnvVars = append(missingEnvVars, "AWS_KMS_KEY_ID_ARN")
 	}

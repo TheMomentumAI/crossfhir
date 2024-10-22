@@ -6,13 +6,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-func ListPrefixObjects(client *s3.Client, bucket string, prefix string) ([]types.Object, error) {
+func ListPrefixObjects(client *s3.Client, bucket, prefix string) ([]types.Object, error) {
 	var objects []types.Object
 
 	paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
@@ -63,6 +64,24 @@ func DownloadS3Object(client *s3.Client, bucket string, key string, destDir stri
 		return err
 	}
 
-	fmt.Printf("Downloaded %s to %s\n", key, filePath)
+	// if verbose {
+	// 	fmt.Printf("Downloaded %s to %s\n", key, filePath)
+	// }
+
 	return nil
+}
+
+func ParseS3Url(s3Url string) (string, string) {
+	s3Url = strings.TrimPrefix(s3Url, "s3://")
+	parts := strings.SplitN(s3Url, "/", 2)
+	bucket := parts[0]
+
+	var prefix string
+	if len(parts) > 1 {
+		prefix = parts[1]
+	} else {
+		prefix = ""
+	}
+
+	return bucket, prefix
 }

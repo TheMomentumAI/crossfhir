@@ -7,20 +7,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func FetchCmd() *cobra.Command {
-	FetchCmd := &cobra.Command{
-		Use:   "fetch",
-		Short: "Fetch FHIR data from S3",
-		RunE:  FetchData,
+func PullCmd() *cobra.Command {
+	PullCmd := &cobra.Command{
+		Use:   "pull",
+		Short: "Pull FHIR data from S3 to local",
+		RunE:  Pull,
 	}
 
-	return FetchCmd
+	return PullCmd
 }
 
-func FetchData(cmd *cobra.Command, args []string) error {
+func Pull(cmd *cobra.Command, args []string) error {
 
+	PullFhirData()
+
+	return nil
+}
+
+func PullFhirData() error {
 	// todo : parametrize
-	bucket := "test-fhir-sandbox-synthea-bucket20241011071523475200000001"
+	bucket := cfg.AwsS3Bucket
+
+	// how to get this from sdk
 	prefix := "8699accb152044514abe6bcc49744168-FHIR_EXPORT-28ee898ca886e56a0a28ef73ad75c370/"
 	localPath := "./data"
 

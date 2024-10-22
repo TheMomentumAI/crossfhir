@@ -2,12 +2,18 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/healthlake"
 	"github.com/aws/aws-sdk-go-v2/service/healthlake/types"
 	"github.com/spf13/cobra"
+)
+
+var (
+	pull bool
+	dir  string
 )
 
 func ExportCmd() *cobra.Command {
@@ -17,23 +23,22 @@ func ExportCmd() *cobra.Command {
 		RunE:  Export,
 	}
 
+	ExportCmd.Flags().BoolVarP(&pull, "pull", "p", false, "Pull data after export")
+	ExportCmd.Flags().StringVarP(&dir, "dir", "d", "./fhir-data", "Directory to save FHIR exported data")
 	return ExportCmd
 }
 
 func Export(cmd *cobra.Command, args []string) error {
-
-	// Define the input for the StartFHIRExportJobInput
 	input := &healthlake.StartFHIRExportJobInput{
-		// ClientToken:       aws.String("my-client-token"),
-		DataAccessRoleArn: aws.String("arn:aws:iam::938862131513:role/HealthLakeImportExportRole"),
-		DatastoreId:       aws.String("8699accb152044514abe6bcc49744168"),
+		DataAccessRoleArn: aws.String(cfg.AwsIAMExportRole),
+		DatastoreId:       aws.String(cfg.AwsDatastoreId),
 		OutputDataConfig: &types.OutputDataConfigMemberS3Configuration{
 			Value: types.S3Configuration{
-				S3Uri: aws.String("s3://test-fhir-sandbox-synthea-bucket20241011071523475200000001"),
-				KmsKeyId: aws.String("arn:aws:kms:us-east-1:938862131513:key/749b1e97-85db-495d-bd1e-dd05af8adaf5"),
+				S3Uri:    aws.String(cfg.AwsS3Bucket),
+				KmsKeyId: aws.String(cfg.AwsKmsKeyId),
 			},
 		},
-		JobName: aws.String("my-export-job"),
+		JobName: aws.String(cfg.AwsExportJobName),
 	}
 
 	out, err := healthlakeClient.StartFHIRExportJob(context.TODO(), input)
@@ -42,8 +47,54 @@ func Export(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Export id job : %v\n", *out.JobId)
+	cfg.AwsExportJobId = *out.JobId
+	cfg.AwsExportJobStatus = string(out.JobStatus)
 
+	err = DescribeProgress()
+
+	if pull {
+		err = PullFhirData()
+		if err != nil {
+			return err
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DescribeProgress() error {
+	input := &healthlake.DescribeFHIRExportJobInput{
+		JobId:       aws.String(cfg.AwsExportJobId),
+		DatastoreId: aws.String(cfg.AwsDatastoreId),
+	}
+
+	for cfg.AwsExportJobStatus != "COMPLETED" {
+		out, err := healthlakeClient.DescribeFHIRExportJob(context.TODO(), input)
+
+		if err != nil {
+			return err
+		}
+
+		if cfg.AwsExportJobS3Output == "" {
+			conf := out.ExportJobProperties.OutputDataConfig
+			cfg.AwsExportJobS3Output = *conf.(*types.OutputDataConfigMemberS3Configuration).Value.S3Uri
+			log.Printf("Job S3 Output: %v\n", cfg.AwsExportJobS3Output)
+		}
+
+		cfg.AwsExportJobStatus = string(out.ExportJobProperties.JobStatus)
+
+		if cfg.AwsExportJobStatus == "FAILED" {
+			log.Fatalf("Job - %v - Failed\n", cfg.AwsExportJobName)
+		}
+
+		log.Printf("Job Status: %v\n", cfg.AwsExportJobStatus)
+		time.Sleep(5 * time.Second)
+	}
+
+	log.Printf("Job - %v - Completed\n", cfg.AwsExportJobName)
 
 	return nil
 }

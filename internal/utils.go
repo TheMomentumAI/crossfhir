@@ -2,12 +2,14 @@ package internal
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v5"
+	"encoding/json"
+	"github.com/k0kubun/pp/v3"
+	"fmt"
 )
+
 
 func PrintJSON(res string) {
 	var prettyJSON map[string]interface{}
@@ -17,17 +19,7 @@ func PrintJSON(res string) {
 		log.Fatalf("Failed to unmarshal JSON: %v", err)
 	}
 
-	prettyBytes, err := json.MarshalIndent(prettyJSON, "", "  ")
-
-	if err != nil {
-		log.Fatalf("Failed to marshal JSON: %v", err)
-	}
-
-	fmt.Println(string(prettyBytes))
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	pp.Print(prettyJSON)
 }
 
 func ExecQuery(conn *pgx.Conn, query string) {

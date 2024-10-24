@@ -27,14 +27,15 @@ var (
 
 type Config struct {
 	// from Env
-	AwsAccessKey     string // e.g. "AKIA..."
-	AwsSecretKey     string // e.g. "Tdaz4e..."
-	AwsRegion        string // e.g. "us-east-1"
-	AwsS3Bucket      string // e.g. "s3://my-bucket"
-	AwsIAMExportRole string // e.g. "arn:aws:iam::123123123:role/IAMRole"
-	AwsDatastoreId   string // e.g. "8699acc...c49744168"
-	AwsKmsKeyId      string // e.g. "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
-	AwsExportJobName string // e.g. "my-export-job"
+	AwsAccessKey        string // e.g. "AKIA..."
+	AwsSecretKey        string // e.g. "Tdaz4e..."
+	AwsRegion           string // e.g. "us-east-1"
+	AwsS3Bucket         string // e.g. "s3://my-bucket"
+	AwsIAMExportRole    string // e.g. "arn:aws:iam::123123123:role/IAMRole"
+	AwsDatastoreId      string // e.g. "8699acc...c49744168"
+	AwsKmsKeyId         string // e.g. "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
+	AwsExportJobName    string // e.g. "my-export-job"
+	AwsDatastoreFHIRUrl string // e.g. "https://healthlake.us-east-1.amazonaws.com"
 
 	// from code
 	AwsExportJobId       string
@@ -58,6 +59,7 @@ func Execute() {
 	rootCmd.AddCommand(ExportCmd())
 	rootCmd.AddCommand(PullCmd())
 	rootCmd.AddCommand(ConvertCmd())
+	rootCmd.AddCommand(RestCmd())
 
 	err := rootCmd.Execute()
 	if err != nil {
@@ -134,6 +136,9 @@ func ValidateEnvs(missingEnvVars []string) []string {
 	if cfg.AwsExportJobName == "" {
 		missingEnvVars = append(missingEnvVars, "AWS_EXPORT_JOB_NAME")
 	}
+
+	cfg.AwsDatastoreFHIRUrl = os.Getenv("AWS_DATASTORE_FHIR_URL")
+
 	return missingEnvVars
 }
 

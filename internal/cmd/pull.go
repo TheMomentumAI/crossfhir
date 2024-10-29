@@ -3,6 +3,7 @@ package cmd
 import (
 	"crossfhir/internal"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -19,29 +20,39 @@ func PullCmd() *cobra.Command {
 		RunE:  Pull,
 	}
 
-	PullCmd.Flags().StringVarP(&s3Url, "url", "u", "", "Directory to save FHIR exported data")
+	missingEnvs := []string{}
+	missingEnvs = validatePullEnvs(missingEnvs)
+
+	if len(missingEnvs) > 0 {
+		log.Println("Missing required environment variables:")
+		for _, envVar := range missingEnvs {
+			log.Printf("%s\n", envVar)
+		}
+
+		os.Exit(1)
+	}
+
+	PullCmd.Flags().StringVarP(&s3Url, "url", "u", "", "URL of the S3 bucket to pull FHIR data from")
 	PullCmd.Flags().StringVarP(&dir, "dir", "d", "./fhir-data", "Directory to save FHIR exported data")
+
+	PullCmd.MarkFlagRequired("url")
 
 	return PullCmd
 }
 
 func Pull(cmd *cobra.Command, args []string) error {
-	// check whether s3 url defined
-
 	PullFhirData()
 
 	return nil
 }
 
 func PullFhirData() error {
-	// it might be passed automatically from `export -p` command or explicitly from `pull` command
+	// s3Url might be passed automatically from `export -p` command or explicitly from `pull` command
 	if s3Url != "" {
 		cfg.AwsExportJobS3Output = s3Url
 	}
 
-	outputS3Url := cfg.AwsExportJobS3Output
-
-	bucket, prefix := internal.ParseS3Url(outputS3Url)
+	bucket, prefix := internal.ParseS3Url(cfg.AwsExportJobS3Output)
 	objects, err := internal.ListPrefixObjects(s3Client, bucket, prefix)
 
 	log.Printf("Downloading %d FHIR data objects from S3 to local directory %s", len(objects), dir)
@@ -53,10 +64,15 @@ func PullFhirData() error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(objects))
 
+	sem := make(chan struct{}, 10) // Limit to 10 concurrent goroutines
+
 	for _, object := range objects {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			sem <- struct{}{}        
+			defer func() { <-sem }()
+
 			if err := internal.DownloadS3Object(s3Client, bucket, *object.Key, dir); err != nil {
 				errChan <- err
 			}
@@ -75,4 +91,13 @@ func PullFhirData() error {
 	log.Printf("Downloaded FHIR data.")
 
 	return nil
+}
+
+func validatePullEnvs(missingEnvs []string) []string {
+	cfg.AwsS3Bucket = os.Getenv("AWS_S3_BUCKET")
+	if cfg.AwsS3Bucket == "" {
+		missingEnvs = append(missingEnvs, "AWS_S3_BUCKET")
+	}
+
+	return missingEnvs
 }

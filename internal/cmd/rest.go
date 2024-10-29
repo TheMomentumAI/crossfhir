@@ -93,6 +93,7 @@ func Get(cmd *cobra.Command, args []string) error {
 	}
 
 	// TODO prittify the JSON responses and colorize them
+	// TODO operate on JQ style queries (?)
 	if resp.StatusCode == http.StatusOK {
 		color.Green("Response Status: %s", resp.Status)
 	} else {

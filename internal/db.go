@@ -64,3 +64,4 @@ func RunFhirMigration(conn *pgx.Conn) error {
 
 	return nil
 }
+

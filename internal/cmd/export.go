@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -20,6 +21,18 @@ func ExportCmd() *cobra.Command {
 		Use:   "export",
 		Short: "Export FHIR data from AWS Health Lake",
 		RunE:  Export,
+	}
+
+	missingEnvs := []string{}
+	missingEnvs = validateExportEnvs(missingEnvs)
+
+	if len(missingEnvs) > 0 {
+		log.Println("Missing required environment variables:")
+		for _, envVar := range missingEnvs {
+			log.Printf("%s\n", envVar)
+		}
+
+		os.Exit(1)
 	}
 
 	ExportCmd.Flags().BoolVarP(&pull, "pull", "p", false, "Pull data after export")
@@ -97,7 +110,7 @@ func DescribeProgress() error {
 
 	if pull {
 		log.Println("Pulling FHIR data")
-		
+
 		err := PullFhirData()
 		if err != nil {
 			return err
@@ -105,4 +118,35 @@ func DescribeProgress() error {
 	}
 
 	return nil
+}
+
+func validateExportEnvs(missingEnvs []string) []string {
+	cfg.AwsS3Bucket = os.Getenv("AWS_S3_BUCKET")
+	if cfg.AwsS3Bucket == "" {
+		missingEnvs = append(missingEnvs, "AWS_S3_BUCKET")
+	}
+
+	cfg.AwsIAMExportRole = os.Getenv("AWS_IAM_EXPORT_ROLE")
+	if cfg.AwsIAMExportRole == "" {
+		missingEnvs = append(missingEnvs, "AWS_IAM_EXPORT_ROLE")
+	}
+
+	cfg.AwsDatastoreId = os.Getenv("AWS_DATASTORE_ID")
+	if cfg.AwsDatastoreId == "" {
+		missingEnvs = append(missingEnvs, "AWS_DATASTORE_ID")
+	}
+
+	cfg.AwsKmsKeyId = os.Getenv("AWS_KMS_KEY_ID_ARN")
+	if cfg.AwsKmsKeyId == "" {
+		missingEnvs = append(missingEnvs, "AWS_KMS_KEY_ID_ARN")
+	}
+
+	cfg.AwsExportJobName = os.Getenv("AWS_EXPORT_JOB_NAME")
+	if cfg.AwsExportJobName == "" {
+		missingEnvs = append(missingEnvs, "AWS_EXPORT_JOB_NAME")
+	}
+
+	cfg.AwsDatastoreFHIRUrl = os.Getenv("AWS_DATASTORE_FHIR_URL")
+
+	return missingEnvs
 }

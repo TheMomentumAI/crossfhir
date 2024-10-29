@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	// "crossfhir/internal"
-	"fmt"
 	"log"
 	"os"
 
@@ -11,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/healthlake"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +16,6 @@ import (
 var (
 	healthlakeClient *healthlake.Client
 	s3Client         *s3.Client
-	pgConn           *pgx.Conn
 	cfg              Config
 	dir              string
 	// verbose          bool
@@ -36,6 +32,11 @@ type Config struct {
 	AwsKmsKeyId         string // e.g. "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
 	AwsExportJobName    string // e.g. "my-export-job"
 	AwsDatastoreFHIRUrl string // e.g. "https://healthlake.us-east-1.amazonaws.com"
+	DbHost              string // e.g. "localhost"
+	DbPort              string // e.g. "5432"
+	DbUsername          string // e.g. "postgres"
+	DbPassword          string // e.g. "password"
+	DbDatabase          string // e.g. "postgres"
 
 	// from code
 	AwsExportJobId       string
@@ -49,8 +50,8 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	LoadEnv()
-	ConfigAWSClient()
+	loadEnv()
+	configAWSClient()
 
 	// pgConn, _ = internal.InitConnection()
 	// internal.RunFhirMigration(pgConn)
@@ -73,7 +74,9 @@ func Execute() {
 	}
 }
 
-func LoadEnv() {
+// private
+
+func loadEnv() {
 	envFile := ".env"
 	rootCmd.PersistentFlags().StringVar(&envFile, "env-file", ".env", "environment file to load")
 
@@ -82,67 +85,39 @@ func LoadEnv() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	missingEnvVars := []string{}
+	missingEnvs := []string{}
+	missingEnvs = validateRootEnvs(missingEnvs)
 
-	missingEnvVars = ValidateEnvs(missingEnvVars)
-
-	if len(missingEnvVars) > 0 {
+	if len(missingEnvs) > 0 {
 		log.Println("Missing required environment variables:")
-		for _, envVar := range missingEnvVars {
-			fmt.Printf("%s\n", envVar)
+		for _, envVar := range missingEnvs {
+			log.Printf("%s\n", envVar)
 		}
 
 		os.Exit(1)
 	}
 }
 
-func ValidateEnvs(missingEnvVars []string) []string {
+func validateRootEnvs(missingEnvs []string) []string {
 	cfg.AwsAccessKey = os.Getenv("AWS_ACCESS_KEY")
 	if cfg.AwsAccessKey == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_ACCESS_KEY")
+		missingEnvs = append(missingEnvs, "AWS_ACCESS_KEY")
 	}
 
 	cfg.AwsSecretKey = os.Getenv("AWS_SECRET_KEY")
 	if cfg.AwsSecretKey == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_SECRET_KEY")
+		missingEnvs = append(missingEnvs, "AWS_SECRET_KEY")
 	}
 
 	cfg.AwsRegion = os.Getenv("AWS_REGION")
 	if cfg.AwsRegion == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_REGION")
+		missingEnvs = append(missingEnvs, "AWS_REGION")
 	}
 
-	cfg.AwsS3Bucket = os.Getenv("AWS_S3_BUCKET")
-	if cfg.AwsS3Bucket == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_S3_BUCKET")
-	}
-
-	cfg.AwsIAMExportRole = os.Getenv("AWS_IAM_EXPORT_ROLE")
-	if cfg.AwsIAMExportRole == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_IAM_EXPORT_ROLE")
-	}
-
-	cfg.AwsDatastoreId = os.Getenv("AWS_DATASTORE_ID")
-	if cfg.AwsDatastoreId == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_DATASTORE_ID")
-	}
-
-	cfg.AwsKmsKeyId = os.Getenv("AWS_KMS_KEY_ID_ARN")
-	if cfg.AwsKmsKeyId == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_KMS_KEY_ID_ARN")
-	}
-
-	cfg.AwsExportJobName = os.Getenv("AWS_EXPORT_JOB_NAME")
-	if cfg.AwsExportJobName == "" {
-		missingEnvVars = append(missingEnvVars, "AWS_EXPORT_JOB_NAME")
-	}
-
-	cfg.AwsDatastoreFHIRUrl = os.Getenv("AWS_DATASTORE_FHIR_URL")
-
-	return missingEnvVars
+	return missingEnvs
 }
 
-func ConfigAWSClient() {
+func configAWSClient() {
 	creds := credentials.NewStaticCredentialsProvider(
 		os.Getenv("AWS_ACCESS_KEY"),
 		os.Getenv("AWS_SECRET_KEY"),

@@ -21,6 +21,7 @@ import (
 var (
 	resourceType string
 	resourceId   string
+	payload			string
 )
 
 func RestCmd() *cobra.Command {
@@ -59,9 +60,11 @@ func PutCmd() *cobra.Command {
 
 	PutCmd.Flags().StringVarP(&resourceType, "resource", "r", "", "Resource type to update, e.g. Patient")
 	PutCmd.Flags().StringVarP(&resourceId, "id", "i", "", "Resource ID to update, e.g. 20a70ecf-c423-4318-82c3-40542074d6a8")
+	PutCmd.Flags().StringVarP(&payload, "payload", "p", "", "Resource payload to update")
 
 	PutCmd.MarkFlagRequired("resource")
 	PutCmd.MarkFlagRequired("id")
+	PutCmd.MarkFlagRequired("payload")
 
 	return PutCmd
 }
@@ -103,12 +106,7 @@ func Get(cmd *cobra.Command, args []string) error {
 func Put(cmd *cobra.Command, args []string) error {
 	url := fmt.Sprintf("%s/%s/%s", cfg.AwsDatastoreFHIRUrl, resourceType, resourceId)
 
-	// TODO parametrize and use flag to pass
-	payload := `{
-	  "id": "20a70ecf-c423-4318-82c3-40542074d6a8",
-		"resourceType": "Patient",
-		"gender": "male"
-	}`
+	payload := cmd.Flag("payload").Value.String()
 
 	req, err := http.NewRequest("PUT", url, strings.NewReader(payload))
 	if err != nil {
@@ -143,7 +141,6 @@ func Put(cmd *cobra.Command, args []string) error {
 }
 
 // private
-
 func signRequest(request *http.Request, payload string, service string) {
 	credentials, err := healthlakeClient.Options().Credentials.Retrieve(context.TODO())
 	if err != nil {

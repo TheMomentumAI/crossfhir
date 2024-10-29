@@ -23,6 +23,11 @@
 - ✅ Command to trigger and monitor data export from HealthLake to S3.
 - ✅ Command to pull exported data from S3 into local .ndjson files (possible to export and pull at once).
 - Interaction with FHIR resources on AWS HealthLake via REST API.
+  - ✅ GET
+  - ✅ PUT
+  - POST
+  - DELETE
+- SMART on FHIR integration
 
 ### PostgreSQL features
 

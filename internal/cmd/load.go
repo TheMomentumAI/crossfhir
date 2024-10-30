@@ -24,7 +24,7 @@ var (
 func LoadCmd() *cobra.Command {
 	LoadCmd := &cobra.Command{
 		Use:   "load",
-		Short: "Load FHIR data to Postgres data. Default PostgreSQL connection",
+		Short: "Load pulled FHIR data to PostgreSQL.",
 		RunE:  Load,
 	}
 
@@ -32,7 +32,7 @@ func LoadCmd() *cobra.Command {
 	initDbConnection()
 
 	LoadCmd.Flags().StringVarP(&dataPath, "data", "d", "", "Path to FHIR data")
-	LoadCmd.Flags().BoolVarP(&migrate, "migrate", "m", false, "Run FHIR migration")
+	LoadCmd.Flags().BoolVarP(&migrate, "migrate", "m", false, "Run database migration that prepares the database for FHIR data")
 	LoadCmd.MarkFlagRequired("data")
 
 	return LoadCmd

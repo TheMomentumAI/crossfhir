@@ -91,37 +91,52 @@ If you want to work directly with the source code, you need to have Go installed
 There is a binary in this repository that you can use if you don't have Go installed.
 
 ```
-./bin/crossfhir
+$ crossfhir
 
-crossfhir is a CLI for converting AWS Health Lake FHIR data to PostgreSQL
+crossfhir is a CLI tool for converting AWS HealthLake FHIR data to PostgreSQL
+and interacting with the HealthLake FHIR REST API.
 
 Usage:
   crossfhir [command]
 
+Examples:
+
+# Exporting data with pull into local directory
+crossfhir export --pull --dir ./mydirectory
+
+# Loading data from local directory to PostgreSQL with migration
+crossfhir load -m --data ./mydirectory
+
+
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
-  convert     Convert FHIR data to Postgres data
-  export      Export FHIR data from AWS Health Lake
+  export      Export FHIR data from AWS Health Lake to S3 bucket
   help        Help about any command
+  load        Load pulled FHIR data to PostgreSQL.
   pull        Pull FHIR data from S3 to local
+  rest        Interact with FHIR REST API
 
 Flags:
       --env-file string   environment file to load (default ".env")
   -h, --help              help for crossfhir
-
-Use "crossfhir [command] --help" for more information about a command.
 ```
 
 Exporting data with pull into local directory:
 
 ```sh
-./bin/crossfhir export --pull --dir ./mydirectory
+$ crossfhir export --pull --dir ./mydirectory
 ```
 
 Pulling created export from S3 path:
 
 ```sh
-./bin/crossfhir pull --url s3://fhir-bucket/fhir-export-123
+$ crossfhir pull --url s3://fhir-bucket/fhir-export-123
+```
+
+Loading data from local directory to PostgreSQL with migration:
+
+```sh
+$ crossfhir load -m --data ./mydirectory
 ```
 
 ## FAQ

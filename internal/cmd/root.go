@@ -13,6 +13,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	shortDescription = `
+crossfhir is a CLI tool for converting AWS HealthLake FHIR data to PostgreSQL
+and interacting with the HealthLake FHIR REST API.
+`
+	examples = `
+# Exporting data with pull into local directory
+crossfhir export --pull --dir ./mydirectory
+
+# Loading data from local directory to PostgreSQL with migration
+crossfhir load -m --data ./mydirectory
+`
+)
+
 var (
 	healthlakeClient *healthlake.Client
 	s3Client         *s3.Client
@@ -45,8 +59,9 @@ type Config struct {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "crossfhir",
-	Short: "crossfhir is a CLI for converting AWS Health Lake FHIR data to PostgreSQL",
+	Use:     "crossfhir",
+	Short:   shortDescription,
+	Example: examples,
 }
 
 func Execute() {

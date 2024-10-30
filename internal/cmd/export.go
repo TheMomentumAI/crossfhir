@@ -19,7 +19,7 @@ var (
 func ExportCmd() *cobra.Command {
 	ExportCmd := &cobra.Command{
 		Use:   "export",
-		Short: "Export FHIR data from AWS Health Lake",
+		Short: "Export FHIR data from AWS Health Lake to S3 bucket",
 		RunE:  Export,
 	}
 
@@ -36,7 +36,7 @@ func ExportCmd() *cobra.Command {
 	}
 
 	ExportCmd.Flags().BoolVarP(&pull, "pull", "p", false, "Pull data after export")
-	ExportCmd.Flags().StringVarP(&dir, "dir", "d", "./fhir-data", "Directory to save FHIR exported data")
+	ExportCmd.Flags().StringVarP(&dir, "dir", "d", "./fhir-data", "Directory to pull exported data")
 	return ExportCmd
 }
 

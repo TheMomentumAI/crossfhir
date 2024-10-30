@@ -53,13 +53,9 @@ func Execute() {
 	loadEnv()
 	configAWSClient()
 
-	// pgConn, _ = internal.InitConnection()
-	// internal.RunFhirMigration(pgConn)
-	// internal.ExecQuery(pgConn, "SELECT id FROM patient")
-
 	rootCmd.AddCommand(ExportCmd())
 	rootCmd.AddCommand(PullCmd())
-	rootCmd.AddCommand(ConvertCmd())
+	rootCmd.AddCommand(LoadCmd())
 	rootCmd.AddCommand(RestCmd())
 
 	err := rootCmd.Execute()
@@ -67,14 +63,10 @@ func Execute() {
 		log.Fatalf("Error executing command: %v", err)
 	}
 
-	// defer pgConn.Close(context.Background())
-
 	if err != nil {
 		os.Exit(1)
 	}
 }
-
-// private
 
 func loadEnv() {
 	envFile := ".env"

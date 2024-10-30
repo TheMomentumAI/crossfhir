@@ -33,14 +33,16 @@
 
 For more information, check the PostgreSQL section.
 
-- PostgreSQL connection setup.
-- Migrating .ndjson files from FHIR v4 resources into specific tables.
+- ✅ PostgreSQL connection setup.
+- ✅ Migrating .ndjson files from FHIR v4 resources into specific tables.
 - Indexing desired elements of resources and separating them from the jsonb column.
 - Handling resource versioning and updates.
 
 ## Prerequisites
 
-To use this tool, several environment variables are required to conduct an export from HealthLake.
+Each command requires a set of environment variables, which are validated during execution.
+
+For example, several environment variables are needed to export from HealthLake, but they aren't necessary when loading data into PostgreSQL.
 
 For more details, you can check the AWS HealthLake module in the [HealthStack repository](https://github.com/TheMomentumAI/healthstack/tree/main/healthlake).
 There, you will find Terraform modules to create everything you need. You can especially benefit from it when creating IAM permissions.
@@ -48,11 +50,13 @@ There, you will find Terraform modules to create everything you need. You can es
 In the .env.example file, you can see a list of the required environment variables.
 
 ```
+### Required for all commands ###
 # AWS credentials to access your account
 export AWS_ACCESS_KEY="AKIA123123123..."
 export AWS_SECRET_KEY="XWSWAD123123123..."
 export AWS_REGION="us-east-1"
 
+### Export ###
 # The name of the S3 bucket
 export AWS_S3_BUCKET="s3://fhir-bucket"
 
@@ -67,6 +71,17 @@ export AWS_KMS_KEY_ID_ARN="arn:aws:kms:region:123123123:key/123123123"
 
 # The export job name for tracking purposes
 export AWS_EXPORT_JOB_NAME="my-export-job"
+
+### Pull ###
+# The name of the S3 bucket
+export AWS_S3_BUCKET="s3://fhir-bucket"
+
+### Load ###
+# PostgreSQL database credentials
+# Also you can pass DB_HOST and DB_PORT if you are not using the default values which are localhost and 5432 respectively
+export DB_USERNAME=postgres
+export DB_PASSWORD=password
+export DB_DATABASE=postgres
 ```
 
 If you want to work directly with the source code, you need to have Go installed on your machine.
@@ -109,14 +124,24 @@ Pulling created export from S3 path:
 ./bin/crossfhir pull --url s3://fhir-bucket/fhir-export-123
 ```
 
+## FAQ
+
+> Why not convert all the JSON data to relational data too, and only store everything in SQL after that?
+
+Converting all in non-lossy way will produce **thousands** of tables, which will be hard to work with and
+it is very complex task. The implementation to solve this issue is [SQL on FHIR](https://sql-on-fhir.org/ig/latest/StructureDefinition-ViewDefinition.html)
+
 ## Contribution
 
 We are open to, and grateful for, any contributions made by the community.
+
+The approach to PostgreSQL tables and jsonb is inspired by the [fhirbase](https://github.com/fhirbase/fhirbase) project by HealthSamurai. Many thanks to the creators and maintainers!
 
 
 <a href="https://github.com/TheMomentumAI/crossfhir/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=TheMomentumAI/crossfhir" />
 </a>
+
 
 ## License
 

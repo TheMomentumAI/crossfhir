@@ -37,6 +37,14 @@ For more information, check the FAQ section.
 - Indexing desired elements of resources and separating them from the jsonb column.
 - Handling resource versioning and updates.
 
+## Installation
+
+Currently supports manual installation only. Homebrew support is coming soon.
+
+```sh
+curl -sSL https://raw.githubusercontent.com/TheMomentumAI/crossfhir/master/scripts/install.sh | bash
+```
+
 ## Prerequisites
 
 Each command requires a set of environment variables, which are validated during execution.

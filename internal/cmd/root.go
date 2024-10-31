@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	version          = "0.1-beta"
 	shortDescription = `
 crossfhir is a CLI tool for converting AWS HealthLake FHIR data to PostgreSQL
 and interacting with the HealthLake FHIR REST API.
@@ -62,6 +63,7 @@ var rootCmd = &cobra.Command{
 	Use:     "crossfhir",
 	Short:   shortDescription,
 	Example: examples,
+	Version: version,
 }
 
 func Execute() {
@@ -89,7 +91,7 @@ func loadEnv() {
 
 	err := godotenv.Load(envFile)
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Printf("Missing .env file: %v", err)
 	}
 
 	missingEnvs := []string{}

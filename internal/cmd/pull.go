@@ -20,18 +20,6 @@ func PullCmd() *cobra.Command {
 		RunE:  Pull,
 	}
 
-	missingEnvs := []string{}
-	missingEnvs = validatePullEnvs(missingEnvs)
-
-	if len(missingEnvs) > 0 {
-		log.Println("Missing required environment variables:")
-		for _, envVar := range missingEnvs {
-			log.Printf("%s\n", envVar)
-		}
-
-		os.Exit(1)
-	}
-
 	PullCmd.Flags().StringVarP(&s3Url, "url", "u", "", "URL of the S3 bucket to pull FHIR data from")
 	PullCmd.Flags().StringVarP(&dir, "dir", "d", "./fhir-data", "Directory to save FHIR exported data")
 
@@ -41,6 +29,7 @@ func PullCmd() *cobra.Command {
 }
 
 func Pull(cmd *cobra.Command, args []string) error {
+	validatePullEnvs()
 	PullFhirData()
 
 	return nil
@@ -70,7 +59,7 @@ func PullFhirData() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sem <- struct{}{}        
+			sem <- struct{}{}
 			defer func() { <-sem }()
 
 			if err := internal.DownloadS3Object(s3Client, bucket, *object.Key, dir); err != nil {
@@ -93,11 +82,21 @@ func PullFhirData() error {
 	return nil
 }
 
-func validatePullEnvs(missingEnvs []string) []string {
+func validatePullEnvs() {
+	missingEnvs := []string{}
+
 	cfg.AwsS3Bucket = os.Getenv("AWS_S3_BUCKET")
 	if cfg.AwsS3Bucket == "" {
 		missingEnvs = append(missingEnvs, "AWS_S3_BUCKET")
 	}
 
-	return missingEnvs
+	if len(missingEnvs) > 0 {
+		log.Println("Missing required environment variables:")
+		for _, envVar := range missingEnvs {
+			log.Printf("%s\n", envVar)
+		}
+
+		os.Exit(1)
+	}
+
 }

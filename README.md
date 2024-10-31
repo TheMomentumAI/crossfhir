@@ -27,11 +27,10 @@
   - ✅ PUT
   - POST
   - DELETE
-- SMART on FHIR integration
 
 ### PostgreSQL features
 
-For more information, check the PostgreSQL section.
+For more information, check the FAQ section.
 
 - ✅ PostgreSQL connection setup.
 - ✅ Migrating .ndjson files from FHIR v4 resources into specific tables.

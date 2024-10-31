@@ -28,9 +28,6 @@ func LoadCmd() *cobra.Command {
 		RunE:  Load,
 	}
 
-	validateLoadEnvs()
-	initDbConnection()
-
 	LoadCmd.Flags().StringVarP(&dataPath, "data", "d", "", "Path to FHIR data")
 	LoadCmd.Flags().BoolVarP(&migrate, "migrate", "m", false, "Run database migration that prepares the database for FHIR data")
 	LoadCmd.MarkFlagRequired("data")
@@ -39,6 +36,9 @@ func LoadCmd() *cobra.Command {
 }
 
 func Load(cmd *cobra.Command, args []string) error {
+	validateLoadEnvs()
+	initDbConnection()
+
 	if migrate {
 		RunFhirMigration(pgConn)
 	}
@@ -149,29 +149,40 @@ func initDbConnection() error {
 }
 
 func validateLoadEnvs() {
+	missingEnvs := []string{}
+
 	cfg.DbHost = os.Getenv("DB_HOST")
 	if cfg.DbHost == "" {
 		cfg.DbHost = "localhost"
 	}
 
 	cfg.DbPort = os.Getenv("DB_PORT")
-	if cfg.DbHost == "" {
-		cfg.DbHost = "5432"
+	if cfg.DbPort == "" {
+		cfg.DbPort = "5432"
 	}
 
 	cfg.DbUsername = os.Getenv("DB_USERNAME")
 	if cfg.DbUsername == "" {
-		log.Fatalf("DB_USERNAME is required")
+		missingEnvs = append(missingEnvs, "DB_USERNAME")
 	}
 
 	cfg.DbPassword = os.Getenv("DB_PASSWORD")
 	if cfg.DbPassword == "" {
-		log.Fatalf("DB_PASSWORD is required")
+		missingEnvs = append(missingEnvs, "DB_PASSWORD")
 	}
 
 	cfg.DbDatabase = os.Getenv("DB_DATABASE")
 	if cfg.DbDatabase == "" {
-		log.Fatalf("DB_DATABASE is required")
+		missingEnvs = append(missingEnvs, "DB_DATABASE")
+	}
+
+	if len(missingEnvs) > 0 {
+		log.Println("Missing required environment variables:")
+		for _, envVar := range missingEnvs {
+			log.Printf("%s\n", envVar)
+		}
+
+		os.Exit(1)
 	}
 }
 

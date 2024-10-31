@@ -23,24 +23,14 @@ func ExportCmd() *cobra.Command {
 		RunE:  Export,
 	}
 
-	missingEnvs := []string{}
-	missingEnvs = validateExportEnvs(missingEnvs)
-
-	if len(missingEnvs) > 0 {
-		log.Println("Missing required environment variables:")
-		for _, envVar := range missingEnvs {
-			log.Printf("%s\n", envVar)
-		}
-
-		os.Exit(1)
-	}
-
 	ExportCmd.Flags().BoolVarP(&pull, "pull", "p", false, "Pull data after export")
 	ExportCmd.Flags().StringVarP(&dir, "dir", "d", "./fhir-data", "Directory to pull exported data")
 	return ExportCmd
 }
 
 func Export(cmd *cobra.Command, args []string) error {
+	validateExportEnvs()
+
 	input := &healthlake.StartFHIRExportJobInput{
 		DataAccessRoleArn: aws.String(cfg.AwsIAMExportRole),
 		DatastoreId:       aws.String(cfg.AwsDatastoreId),
@@ -120,7 +110,9 @@ func DescribeProgress() error {
 	return nil
 }
 
-func validateExportEnvs(missingEnvs []string) []string {
+func validateExportEnvs() {
+	missingEnvs := []string{}
+
 	cfg.AwsS3Bucket = os.Getenv("AWS_S3_BUCKET")
 	if cfg.AwsS3Bucket == "" {
 		missingEnvs = append(missingEnvs, "AWS_S3_BUCKET")
@@ -148,5 +140,12 @@ func validateExportEnvs(missingEnvs []string) []string {
 
 	cfg.AwsDatastoreFHIRUrl = os.Getenv("AWS_DATASTORE_FHIR_URL")
 
-	return missingEnvs
+	if len(missingEnvs) > 0 {
+		log.Println("Missing required environment variables:")
+		for _, envVar := range missingEnvs {
+			log.Printf("%s\n", envVar)
+		}
+
+		os.Exit(1)
+	}
 }

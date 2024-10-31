@@ -91,39 +91,8 @@ func loadEnv() {
 
 	err := godotenv.Load(envFile)
 	if err != nil {
-		log.Printf("Missing .env file: %v", err)
+		log.Println("Missing .env file in current directory. Pass --env-file flag to specify a file.")
 	}
-
-	missingEnvs := []string{}
-	missingEnvs = validateRootEnvs(missingEnvs)
-
-	if len(missingEnvs) > 0 {
-		log.Println("Missing required environment variables:")
-		for _, envVar := range missingEnvs {
-			log.Printf("%s\n", envVar)
-		}
-
-		os.Exit(1)
-	}
-}
-
-func validateRootEnvs(missingEnvs []string) []string {
-	cfg.AwsAccessKey = os.Getenv("AWS_ACCESS_KEY")
-	if cfg.AwsAccessKey == "" {
-		missingEnvs = append(missingEnvs, "AWS_ACCESS_KEY")
-	}
-
-	cfg.AwsSecretKey = os.Getenv("AWS_SECRET_KEY")
-	if cfg.AwsSecretKey == "" {
-		missingEnvs = append(missingEnvs, "AWS_SECRET_KEY")
-	}
-
-	cfg.AwsRegion = os.Getenv("AWS_REGION")
-	if cfg.AwsRegion == "" {
-		missingEnvs = append(missingEnvs, "AWS_REGION")
-	}
-
-	return missingEnvs
 }
 
 func configAWSClient() {

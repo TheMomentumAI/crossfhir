@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -29,18 +30,18 @@ func ExportCmd() *cobra.Command {
 }
 
 func Export(cmd *cobra.Command, args []string) error {
-	validateExportEnvs()
+	validateExportConfig()
 
 	input := &healthlake.StartFHIRExportJobInput{
-		DataAccessRoleArn: aws.String(cfg.AwsIAMExportRole),
-		DatastoreId:       aws.String(cfg.AwsDatastoreId),
+		DataAccessRoleArn: aws.String(cfg.Aws.IAMExportRole),
+		DatastoreId:       aws.String(cfg.Aws.DatastoreId),
 		OutputDataConfig: &types.OutputDataConfigMemberS3Configuration{
 			Value: types.S3Configuration{
-				S3Uri:    aws.String(cfg.AwsS3Bucket),
-				KmsKeyId: aws.String(cfg.AwsKmsKeyId),
+				S3Uri:    aws.String(cfg.Aws.S3Bucket),
+				KmsKeyId: aws.String(cfg.Aws.KmsKeyId),
 			},
 		},
-		JobName: aws.String(cfg.AwsExportJobName),
+		JobName: aws.String(cfg.Aws.ExportJobName),
 	}
 
 	out, err := healthlakeClient.StartFHIRExportJob(context.TODO(), input)
@@ -49,12 +50,13 @@ func Export(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cfg.AwsExportJobId = *out.JobId
-	cfg.AwsExportJobStatus = string(out.JobStatus)
+	cfg.Aws.ExportJobId = *out.JobId
+	cfg.Aws.ExportJobStatus = string(out.JobStatus)
 
 	err = DescribeProgress()
 
 	if pull {
+		log.Println("Pulling FHIR data")
 		err = PullFhirData()
 		if err != nil {
 			return err
@@ -69,98 +71,82 @@ func Export(cmd *cobra.Command, args []string) error {
 
 func DescribeProgress() error {
 	input := &healthlake.DescribeFHIRExportJobInput{
-		JobId:       aws.String(cfg.AwsExportJobId),
-		DatastoreId: aws.String(cfg.AwsDatastoreId),
+		JobId:       aws.String(cfg.Aws.ExportJobId),
+		DatastoreId: aws.String(cfg.Aws.DatastoreId),
 	}
 
-	for cfg.AwsExportJobStatus != "COMPLETED" {
+	for cfg.Aws.ExportJobStatus != "COMPLETED" {
 		out, err := healthlakeClient.DescribeFHIRExportJob(context.TODO(), input)
 
 		if err != nil {
 			return err
 		}
 
-		if cfg.AwsExportJobS3Output == "" {
+		if cfg.Aws.ExportJobS3Output == "" {
 			conf := out.ExportJobProperties.OutputDataConfig
-			cfg.AwsExportJobS3Output = *conf.(*types.OutputDataConfigMemberS3Configuration).Value.S3Uri
-			log.Printf("Job S3 Output: %v\n", cfg.AwsExportJobS3Output)
+			cfg.Aws.ExportJobS3Output = *conf.(*types.OutputDataConfigMemberS3Configuration).Value.S3Uri
+			log.Printf("Job S3 Output: %v\n", cfg.Aws.ExportJobS3Output)
 		}
 
-		cfg.AwsExportJobStatus = string(out.ExportJobProperties.JobStatus)
+		cfg.Aws.ExportJobStatus = string(out.ExportJobProperties.JobStatus)
 
-		if cfg.AwsExportJobStatus == "FAILED" {
-			log.Fatalf("Job - %v - Failed\n", cfg.AwsExportJobName)
+		if cfg.Aws.ExportJobStatus == "FAILED" {
+			log.Fatalf("Job - %v - Failed\n", cfg.Aws.ExportJobName)
 		}
 
-		log.Printf("Job Status: %v\n", cfg.AwsExportJobStatus)
+		log.Printf("Job Status: %v\n", cfg.Aws.ExportJobStatus)
 		time.Sleep(5 * time.Second)
 	}
 
-	log.Printf("Job - %v - Completed\n", cfg.AwsExportJobName)
-
-	if pull {
-		log.Println("Pulling FHIR data")
-
-		err := PullFhirData()
-		if err != nil {
-			return err
-		}
-	}
+	log.Printf("Job - %v - Completed\n", cfg.Aws.ExportJobName)
 
 	return nil
 }
 
-func validateExportEnvs() {
+func validateExportConfig() {
 	missingEnvs := []string{}
 
-	cfg.AwsAccessKey = os.Getenv("AWS_ACCESS_KEY")
-	if cfg.AwsAccessKey == "" {
-		missingEnvs = append(missingEnvs, "AWS_ACCESS_KEY")
+	if cfg.Aws.AccessKey == "" {
+		missingEnvs = append(missingEnvs, "aws_access_key")
 	}
 
-	cfg.AwsSecretKey = os.Getenv("AWS_SECRET_KEY")
-	if cfg.AwsSecretKey == "" {
-		missingEnvs = append(missingEnvs, "AWS_SECRET_KEY")
+	if cfg.Aws.SecretKey == "" {
+		missingEnvs = append(missingEnvs, "aws_secret_key")
 	}
 
-	cfg.AwsRegion = os.Getenv("AWS_REGION")
-	if cfg.AwsRegion == "" {
-		missingEnvs = append(missingEnvs, "AWS_REGION")
+	if cfg.Aws.Region == "" {
+		missingEnvs = append(missingEnvs, "aws_region")
 	}
 
-	cfg.AwsS3Bucket = os.Getenv("AWS_S3_BUCKET")
-	if cfg.AwsS3Bucket == "" {
-		missingEnvs = append(missingEnvs, "AWS_S3_BUCKET")
+	if cfg.Aws.S3Bucket == "" {
+		missingEnvs = append(missingEnvs, "aws_s3_bucket")
 	}
 
-	cfg.AwsIAMExportRole = os.Getenv("AWS_IAM_EXPORT_ROLE")
-	if cfg.AwsIAMExportRole == "" {
-		missingEnvs = append(missingEnvs, "AWS_IAM_EXPORT_ROLE")
+	if cfg.Aws.IAMExportRole == "" {
+		missingEnvs = append(missingEnvs, "aws_iam_export_role")
 	}
 
-	cfg.AwsDatastoreId = os.Getenv("AWS_DATASTORE_ID")
-	if cfg.AwsDatastoreId == "" {
-		missingEnvs = append(missingEnvs, "AWS_DATASTORE_ID")
+	if cfg.Aws.DatastoreId == "" {
+		missingEnvs = append(missingEnvs, "aws_datastore_id")
 	}
 
-	cfg.AwsKmsKeyId = os.Getenv("AWS_KMS_KEY_ID_ARN")
-	if cfg.AwsKmsKeyId == "" {
-		missingEnvs = append(missingEnvs, "AWS_KMS_KEY_ID_ARN")
+	if cfg.Aws.KmsKeyId == "" {
+		missingEnvs = append(missingEnvs, "aws_kms_key_id")
 	}
 
-	cfg.AwsExportJobName = os.Getenv("AWS_EXPORT_JOB_NAME")
-	if cfg.AwsExportJobName == "" {
-		missingEnvs = append(missingEnvs, "AWS_EXPORT_JOB_NAME")
+	if cfg.Aws.ExportJobName == "" {
+		missingEnvs = append(missingEnvs, "aws_export_job_name")
 	}
 
-	cfg.AwsDatastoreFHIRUrl = os.Getenv("AWS_DATASTORE_FHIR_URL")
+	if cfg.Aws.DatastoreFHIRUrl == "" {
+		missingEnvs = append(missingEnvs, "aws_datastore_fhir_url")
+	}
 
 	if len(missingEnvs) > 0 {
-		log.Println("Missing required environment variables:")
+		log.Println("Missing required config variables for export action:")
 		for _, envVar := range missingEnvs {
-			log.Printf("%s\n", envVar)
+			fmt.Printf("%s\n", envVar)
 		}
-
 		os.Exit(1)
 	}
 }

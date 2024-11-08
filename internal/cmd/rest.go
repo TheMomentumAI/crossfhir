@@ -70,7 +70,7 @@ func PutCmd() *cobra.Command {
 }
 
 func Get(cmd *cobra.Command, args []string) error {
-	url := fmt.Sprintf("%s/%s/%s", cfg.AwsDatastoreFHIRUrl, resourceType, resourceId)
+	url := fmt.Sprintf("%s/%s/%s", cfg.Aws.DatastoreFHIRUrl, resourceType, resourceId)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -105,7 +105,7 @@ func Get(cmd *cobra.Command, args []string) error {
 }
 
 func Put(cmd *cobra.Command, args []string) error {
-	url := fmt.Sprintf("%s/%s/%s", cfg.AwsDatastoreFHIRUrl, resourceType, resourceId)
+	url := fmt.Sprintf("%s/%s/%s", cfg.Aws.DatastoreFHIRUrl, resourceType, resourceId)
 
 	payload := cmd.Flag("payload").Value.String()
 
@@ -156,7 +156,7 @@ func signRequest(request *http.Request, payload string, service string) {
 		request,
 		calculatePayloadHash(payload),
 		service,
-		cfg.AwsRegion,
+		cfg.Aws.Region,
 		time.Now(),
 	)
 

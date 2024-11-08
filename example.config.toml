@@ -1,0 +1,17 @@
+[aws]
+aws_access_key = "AKIA..."
+aws_secret_key = "Tdaz4e..."
+aws_region = "us-east-1"
+aws_s3_bucket = "s3://my-bucket"
+aws_iam_export_role = "arn:aws:iam::123123123:role/IAMRole"
+aws_datastore_id = "8699acc...c49744168"
+aws_kms_key_id = "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
+aws_export_job_name = "my-export-job"
+aws_datastore_fhir_url = "https://healthlake.us-east-1.amazonaws.com"
+
+[db]
+db_host = "localhost"
+db_port = "5432"
+db_username = "postgres"
+db_password = "password"
+db_database = "postgres"

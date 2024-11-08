@@ -42,7 +42,10 @@ func DownloadS3Object(client *s3.Client, bucket string, key string, destDir stri
 	}
 
 	filePath := filepath.Join(destDir, filepath.Base(key))
-	fmt.Println(filePath)
+
+	// print on verbose
+	//fmt.Println(filePath)
+
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		return err

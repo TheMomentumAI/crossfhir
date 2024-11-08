@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"crossfhir/internal"
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -29,7 +30,7 @@ func PullCmd() *cobra.Command {
 }
 
 func Pull(cmd *cobra.Command, args []string) error {
-	validatePullEnvs()
+	validatePullConfig()
 	PullFhirData()
 
 	return nil
@@ -38,10 +39,10 @@ func Pull(cmd *cobra.Command, args []string) error {
 func PullFhirData() error {
 	// s3Url might be passed automatically from `export -p` command or explicitly from `pull` command
 	if s3Url != "" {
-		cfg.AwsExportJobS3Output = s3Url
+		cfg.Aws.ExportJobS3Output = s3Url
 	}
 
-	bucket, prefix := internal.ParseS3Url(cfg.AwsExportJobS3Output)
+	bucket, prefix := internal.ParseS3Url(cfg.Aws.ExportJobS3Output)
 	objects, err := internal.ListPrefixObjects(s3Client, bucket, prefix)
 
 	log.Printf("Downloading %d FHIR data objects from S3 to local directory %s", len(objects), dir)
@@ -54,6 +55,7 @@ func PullFhirData() error {
 	errChan := make(chan error, len(objects))
 
 	sem := make(chan struct{}, 10) // Limit to 10 concurrent goroutines
+	fileCounter := 0
 
 	for _, object := range objects {
 		wg.Add(1)
@@ -61,7 +63,7 @@ func PullFhirData() error {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-
+			fileCounter++
 			if err := internal.DownloadS3Object(s3Client, bucket, *object.Key, dir); err != nil {
 				errChan <- err
 			}
@@ -77,41 +79,34 @@ func PullFhirData() error {
 		}
 	}
 
-	log.Printf("Downloaded FHIR data.")
-
+	log.Printf("Downloaded %d FHIR data files.", fileCounter)
 	return nil
 }
 
-func validatePullEnvs() {
+func validatePullConfig() {
 	missingEnvs := []string{}
 
-	cfg.AwsAccessKey = os.Getenv("AWS_ACCESS_KEY")
-	if cfg.AwsAccessKey == "" {
-		missingEnvs = append(missingEnvs, "AWS_ACCESS_KEY")
+	if cfg.Aws.AccessKey == "" {
+		missingEnvs = append(missingEnvs, "aws_access_key")
 	}
 
-	cfg.AwsSecretKey = os.Getenv("AWS_SECRET_KEY")
-	if cfg.AwsSecretKey == "" {
-		missingEnvs = append(missingEnvs, "AWS_SECRET_KEY")
+	if cfg.Aws.SecretKey == "" {
+		missingEnvs = append(missingEnvs, "aws_secret_key")
 	}
 
-	cfg.AwsRegion = os.Getenv("AWS_REGION")
-	if cfg.AwsRegion == "" {
-		missingEnvs = append(missingEnvs, "AWS_REGION")
+	if cfg.Aws.Region == "" {
+		missingEnvs = append(missingEnvs, "aws_region")
 	}
 
-	cfg.AwsS3Bucket = os.Getenv("AWS_S3_BUCKET")
-	if cfg.AwsS3Bucket == "" {
-		missingEnvs = append(missingEnvs, "AWS_S3_BUCKET")
+	if cfg.Aws.S3Bucket == "" {
+		missingEnvs = append(missingEnvs, "aws_s3_bucket")
 	}
 
 	if len(missingEnvs) > 0 {
-		log.Println("Missing required environment variables:")
+		log.Println("Missing required config variables for pull action:")
 		for _, envVar := range missingEnvs {
-			log.Printf("%s\n", envVar)
+			fmt.Printf("%s\n", envVar)
 		}
-
 		os.Exit(1)
 	}
-
 }

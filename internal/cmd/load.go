@@ -36,7 +36,7 @@ func LoadCmd() *cobra.Command {
 }
 
 func Load(cmd *cobra.Command, args []string) error {
-	validateLoadEnvs()
+	validateLoadConfig()
 	initDbConnection()
 
 	if migrate {
@@ -131,11 +131,11 @@ func loadObject(v interface{}, fileName string) {
 func initDbConnection() error {
 	dbUrl := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s",
-		cfg.DbUsername,
-		cfg.DbPassword,
-		cfg.DbHost,
-		cfg.DbPort,
-		cfg.DbDatabase,
+		cfg.Db.Username,
+		cfg.Db.Password,
+		cfg.Db.Host,
+		cfg.Db.Port,
+		cfg.Db.Database,
 	)
 
 	conn, err := pgx.Connect(context.Background(), dbUrl)
@@ -148,40 +148,34 @@ func initDbConnection() error {
 	return nil
 }
 
-func validateLoadEnvs() {
+func validateLoadConfig() {
 	missingEnvs := []string{}
 
-	cfg.DbHost = os.Getenv("DB_HOST")
-	if cfg.DbHost == "" {
-		cfg.DbHost = "localhost"
+	if cfg.Db.Host == "" {
+		cfg.Db.Host = "localhost"
 	}
 
-	cfg.DbPort = os.Getenv("DB_PORT")
-	if cfg.DbPort == "" {
-		cfg.DbPort = "5432"
+	if cfg.Db.Port == "" {
+		cfg.Db.Port = "5432"
 	}
 
-	cfg.DbUsername = os.Getenv("DB_USERNAME")
-	if cfg.DbUsername == "" {
-		missingEnvs = append(missingEnvs, "DB_USERNAME")
+	if cfg.Db.Username == "" {
+		missingEnvs = append(missingEnvs, "db_username")
 	}
 
-	cfg.DbPassword = os.Getenv("DB_PASSWORD")
-	if cfg.DbPassword == "" {
-		missingEnvs = append(missingEnvs, "DB_PASSWORD")
+	if cfg.Db.Password == "" {
+		missingEnvs = append(missingEnvs, "db_password")
 	}
 
-	cfg.DbDatabase = os.Getenv("DB_DATABASE")
-	if cfg.DbDatabase == "" {
-		missingEnvs = append(missingEnvs, "DB_DATABASE")
+	if cfg.Db.Database == "" {
+		missingEnvs = append(missingEnvs, "db_database")
 	}
 
 	if len(missingEnvs) > 0 {
-		log.Println("Missing required environment variables:")
+		log.Println("Missing required config variables for load action:")
 		for _, envVar := range missingEnvs {
-			log.Printf("%s\n", envVar)
+			fmt.Printf("%s\n", envVar)
 		}
-
 		os.Exit(1)
 	}
 }

@@ -3,18 +3,17 @@ module crossfhir
 go 1.23.1
 
 require (
+	github.com/BurntSushi/toml v1.4.0
 	github.com/aws/aws-sdk-go-v2 v1.32.2
 	github.com/aws/aws-sdk-go-v2/config v1.27.43
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.41
 	github.com/aws/aws-sdk-go-v2/service/healthlake v1.28.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.65.3
 	github.com/jackc/pgx/v5 v5.7.1
-	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.8.1
 )
 
 require (
-	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/sys v0.25.0 // indirect

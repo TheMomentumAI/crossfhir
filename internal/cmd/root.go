@@ -5,11 +5,11 @@ import (
 	"log"
 	"os"
 
+	"github.com/BurntSushi/toml"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/healthlake"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -33,30 +33,37 @@ var (
 	s3Client         *s3.Client
 	cfg              Config
 	dir              string
+	configFile       string
 	// verbose          bool
 )
 
 type Config struct {
-	// from Env
-	AwsAccessKey        string // e.g. "AKIA..."
-	AwsSecretKey        string // e.g. "Tdaz4e..."
-	AwsRegion           string // e.g. "us-east-1"
-	AwsS3Bucket         string // e.g. "s3://my-bucket"
-	AwsIAMExportRole    string // e.g. "arn:aws:iam::123123123:role/IAMRole"
-	AwsDatastoreId      string // e.g. "8699acc...c49744168"
-	AwsKmsKeyId         string // e.g. "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
-	AwsExportJobName    string // e.g. "my-export-job"
-	AwsDatastoreFHIRUrl string // e.g. "https://healthlake.us-east-1.amazonaws.com"
-	DbHost              string // e.g. "localhost"
-	DbPort              string // e.g. "5432"
-	DbUsername          string // e.g. "postgres"
-	DbPassword          string // e.g. "password"
-	DbDatabase          string // e.g. "postgres"
+	Aws AwsConfig `toml:"aws"`
+	Db  DbConfig  `toml:"db"`
+}
 
+type AwsConfig struct {
+	AccessKey        string `toml:"aws_access_key"`         // e.g. "AKIA..."
+	SecretKey        string `toml:"aws_secret_key"`         // e.g. "Tdaz4e..."
+	Region           string `toml:"aws_region"`             // e.g. "us-east-1"
+	S3Bucket         string `toml:"aws_s3_bucket"`          // e.g. "s3://my-bucket"
+	IAMExportRole    string `toml:"aws_iam_export_role"`    // e.g. "arn:aws:iam::123123123:role/IAMRole"
+	DatastoreId      string `toml:"aws_datastore_id"`       // e.g. "8699acc...c49744168"
+	KmsKeyId         string `toml:"aws_kms_key_id"`         // e.g. "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
+	ExportJobName    string `toml:"aws_export_job_name"`    // e.g. "my-export-job"
+	DatastoreFHIRUrl string `toml:"aws_datastore_fhir_url"` // e.g. "https://healthlake.us-east-1.amazonaws.com"
 	// from code
-	AwsExportJobId       string
-	AwsExportJobStatus   string
-	AwsExportJobS3Output string
+	ExportJobId       string `toml:"-"`
+	ExportJobStatus   string `toml:"-"`
+	ExportJobS3Output string `toml:"-"`
+}
+
+type DbConfig struct {
+	Host     string `toml:"db_host"`     // e.g. "localhost"
+	Port     string `toml:"db_port"`     // e.g. "5432"
+	Username string `toml:"db_username"` // e.g. "postgres"
+	Password string `toml:"db_password"` // e.g. "password"
+	Database string `toml:"db_database"` // e.g. "postgres"
 }
 
 var rootCmd = &cobra.Command{
@@ -66,10 +73,12 @@ var rootCmd = &cobra.Command{
 	Version: version,
 }
 
-func Execute() {
-	loadEnv()
-	configAWSClient()
+func init() {
+	cobra.OnInitialize(loadConfig, configAWSClient)
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "config.toml", "crossfhir config file path")
+}
 
+func Execute() {
 	rootCmd.AddCommand(ExportCmd())
 	rootCmd.AddCommand(PullCmd())
 	rootCmd.AddCommand(LoadCmd())
@@ -85,26 +94,24 @@ func Execute() {
 	}
 }
 
-func loadEnv() {
-	envFile := ".env"
-	rootCmd.PersistentFlags().StringVar(&envFile, "env-file", ".env", "environment file to load")
-
-	err := godotenv.Load(envFile)
-	if err != nil {
-		log.Println("Missing .env file in current directory. Pass --env-file flag to specify a file.")
+func loadConfig() {
+	if _, err := toml.DecodeFile(configFile, &cfg); err != nil {
+		log.Fatalf("Error loading config file: %v", err)
 	}
 }
 
+// TODO use smart on fhir
 func configAWSClient() {
 	creds := credentials.NewStaticCredentialsProvider(
-		os.Getenv("AWS_ACCESS_KEY"),
-		os.Getenv("AWS_SECRET_KEY"),
+		cfg.Aws.AccessKey,
+		cfg.Aws.SecretKey,
 		"",
 	)
 
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
 		config.WithCredentialsProvider(creds),
+		config.WithRegion(cfg.Aws.Region),
 	)
 
 	if err != nil {

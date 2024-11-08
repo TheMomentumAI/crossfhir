@@ -4,3 +4,5 @@ data
 tmp/
 .DS_Store
 dist/
+config.toml
+.vscode

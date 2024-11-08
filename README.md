@@ -47,48 +47,43 @@ curl -sSL https://raw.githubusercontent.com/TheMomentumAI/crossfhir/master/scrip
 
 ## Prerequisites
 
-Each command requires a set of environment variables, which are validated during execution.
+Each command requires a set of configuration parameters, which are validated during execution.
 
-For example, several environment variables are needed to export from HealthLake, but they aren't necessary when loading data into PostgreSQL.
+For example, several parameters are needed to export from HealthLake, but they aren't necessary when loading data into PostgreSQL.
 
 For more details, you can check the AWS HealthLake module in the [HealthStack repository](https://github.com/TheMomentumAI/healthstack/tree/main/healthlake).
 There, you will find Terraform modules to create everything you need. You can especially benefit from it when creating IAM permissions.
 
-In the .env.example file, you can see a list of the required environment variables.
+In the `example.config.toml` file, you can see a list of the required configuration parameters.
 
-```
-### Required for all commands ###
+```toml
+[aws]
 # AWS credentials to access your account
-export AWS_ACCESS_KEY="AKIA123123123..."
-export AWS_SECRET_KEY="XWSWAD123123123..."
-export AWS_REGION="us-east-1"
-
+aws_access_key = "AKIA123123123..."
+aws_secret_key = "XWSWAD123123123..."
+aws_region = "us-east-1"
 ### Export ###
 # The name of the S3 bucket
-export AWS_S3_BUCKET="s3://fhir-bucket"
-
+aws_s3_bucket = "s3://fhir-bucket"
 # The ARN of an IAM Role to conduct the export, which has access to S3, KMS, and HealthLake
-export AWS_IAM_EXPORT_ROLE="arn:aws:iam::123:role/Role"
-
+aws_iam_export_role = "arn:aws:iam::123:role/Role"
 # The ID of your HealthLake FHIR datastore
-export AWS_DATASTORE_ID="123123123123"
-
+aws_datastore_id = "123123123123"
 # The ARN of a KMS key that encrypts the S3 bucket (not that encrypts the HealthLake datastore)
-export AWS_KMS_KEY_ID_ARN="arn:aws:kms:region:123123123:key/123123123"
-
+aws_kms_key_id_arn = "arn:aws:kms:region:123123123:key/123123123"
 # The export job name for tracking purposes
-export AWS_EXPORT_JOB_NAME="my-export-job"
-
+aws_export_job_name = "my-export-job"
 ### Pull ###
 # The name of the S3 bucket
-export AWS_S3_BUCKET="s3://fhir-bucket"
+aws_s3_bucket = "s3://fhir-bucket"
 
 ### Load ###
 # PostgreSQL database credentials
-# Also you can pass DB_HOST and DB_PORT if you are not using the default values which are localhost and 5432 respectively
-export DB_USERNAME=postgres
-export DB_PASSWORD=password
-export DB_DATABASE=postgres
+# Also you can pass db_host and db_port if you are not using the default values which are localhost and 5432 respectively
+[db]
+db_username = "postgres"
+db_password = "password"
+db_database = "postgres"
 ```
 
 If you want to work directly with the source code, you need to have Go installed on your machine.

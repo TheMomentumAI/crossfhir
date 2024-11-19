@@ -71,7 +71,6 @@ func loadConfig() {
 	}
 }
 
-// TODO use smart on fhir
 func configAWSClient() {
 	creds := credentials.NewStaticCredentialsProvider(
 		cfg.Aws.AccessKey,

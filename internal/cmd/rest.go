@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"crossfhir/internal"
+	"crossfhir/internal/helpers"
 
 	awsSigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/fatih/color"
@@ -99,7 +99,7 @@ func Get(cmd *cobra.Command, args []string) error {
 	} else {
 		color.Red("Response Status: %s", resp.Status)
 	}
-	internal.PrintJSON(string(body))
+	helpers.PrintJSON(string(body))
 
 	return nil
 }
@@ -136,7 +136,7 @@ func Put(cmd *cobra.Command, args []string) error {
 	} else {
 		color.Red("Response Status: %s", resp.Status)
 	}
-	internal.PrintJSON(string(body))
+	helpers.PrintJSON(string(body))
 
 	return nil
 }

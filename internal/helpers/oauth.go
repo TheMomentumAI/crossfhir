@@ -1,4 +1,4 @@
-package oauth
+package helpers
 
 import (
 	"encoding/base64"

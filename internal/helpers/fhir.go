@@ -1,4 +1,4 @@
-package internal
+package helpers
 
 
 var FhirSQLCommands = []string{

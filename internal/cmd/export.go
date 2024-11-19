@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"crossfhir/internal/oauth"
+	"crossfhir/internal/helpers"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/healthlake"
@@ -79,7 +79,7 @@ func ExportSmart(cmd *cobra.Command, args []string) error {
 		Timeout: time.Second * 30,
 	}
 
-	token, err := oauth.GetAuthToken(oauth2Config, client, cfg.Smart.GrantType)
+	token, err := helpers.GetAuthToken(oauth2Config, client, cfg.Smart.GrantType)
 
 	if err != nil {
 		return fmt.Errorf("failed to get auth token: %w", err)
@@ -128,7 +128,6 @@ func ExportSmart(cmd *cobra.Command, args []string) error {
 	jobLocation := resp.Header.Get("Content-Location")
 	cfg.Smart.ExportJobId = extractJobId(jobLocation)
 
-	// for future verbose
 	fmt.Printf("Export job ID: %s\n", cfg.Smart.ExportJobId)
 
 	err = monitorExportProgress(client, token.AccessToken)
@@ -187,7 +186,8 @@ func ExportAws(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// helper functions
+// HELPERS //
+
 func extractJobId(locationUrl string) string {
 	if locationUrl == "" {
 		return ""
@@ -283,7 +283,7 @@ func monitorExportProgressAws() error {
 	return nil
 }
 
-// validations
+// VALIDATION //
 func validateSmartConfig() {
 	missingEnvs := []string{}
 

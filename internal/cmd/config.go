@@ -1,44 +1,86 @@
 package cmd
 
+// Config represents the main configuration structure for crossfhir.
+// It contains all necessary settings for AWS, database, and SMART on FHIR connectivity.
 type Config struct {
-	Aws   AwsConfig   `toml:"aws"`
-	Db    DbConfig    `toml:"db"`
-	Smart SmartConfig `toml:"smart"`
+	Aws   AwsConfig   `toml:"aws"`   // AWS-related configuration
+	Db    DbConfig    `toml:"db"`    // Database-related configuration
+	Smart SmartConfig `toml:"smart"` // SMART on FHIR-related configuration
 }
 
+// AwsConfig holds AWS-specific configuration parameters including credentials
+// and service endpoints.
 type AwsConfig struct {
-	AccessKey        string `toml:"aws_access_key"`         // e.g. "AKIA..."
-	SecretKey        string `toml:"aws_secret_key"`         // e.g. "Tdaz4e..."
-	Region           string `toml:"aws_region"`             // e.g. "us-east-1"
-	S3Bucket         string `toml:"aws_s3_bucket"`          // e.g. "s3://my-bucket"
-	IAMExportRole    string `toml:"aws_iam_export_role"`    // e.g. "arn:aws:iam::123123123:role/IAMRole"
-	DatastoreId      string `toml:"aws_datastore_id"`       // e.g. "8699acc...c49744168"
-	KmsKeyId         string `toml:"aws_kms_key_id"`         // e.g. "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
-	ExportJobName    string `toml:"aws_export_job_name"`    // e.g. "my-export-job"
-	DatastoreFHIRUrl string `toml:"aws_datastore_fhir_url"` // e.g. "https://healthlake.us-east-1.amazonaws.com"
-	// from code
-	ExportJobId       string `toml:"-"`
-	ExportJobStatus   string `toml:"-"`
-	ExportJobS3Output string `toml:"-"`
+	// AccessKey is the AWS access key ID
+	AccessKey string `toml:"aws_access_key"`
+
+	// SecretKey is the AWS secret access key
+	SecretKey string `toml:"aws_secret_key"`
+
+	// Region specifies the AWS region (e.g., "us-east-1")
+	Region string `toml:"aws_region"`
+
+	// S3Bucket is the S3 bucket URL (e.g., "s3://my-bucket")
+	S3Bucket string `toml:"aws_s3_bucket"`
+
+	// IAMExportRole is the ARN of the IAM role used for exports
+	IAMExportRole string `toml:"aws_iam_export_role"`
+
+	// DatastoreId is the AWS HealthLake FHIR datastore ID
+	DatastoreId string `toml:"aws_datastore_id"`
+
+	// KmsKeyId is the ARN of the KMS key used for S3 bucket encryption
+	KmsKeyId string `toml:"aws_kms_key_id"`
+
+	// ExportJobName is a user-defined name for the export job
+	ExportJobName string `toml:"aws_export_job_name"`
+
+	// DatastoreFHIRUrl is the base URL for the FHIR datastore
+	DatastoreFHIRUrl string `toml:"aws_datastore_fhir_url"`
+
+	// Runtime fields (not in TOML configuration)
+	ExportJobId       string `toml:"-"` // ID of the current export job
+	ExportJobStatus   string `toml:"-"` // Status of the current export job
+	ExportJobS3Output string `toml:"-"` // S3 output location of the export
 }
 
+// DbConfig holds PostgreSQL database connection parameters.
 type DbConfig struct {
-	Host     string `toml:"db_host"`     // e.g. "localhost"
-	Port     string `toml:"db_port"`     // e.g. "5432"
-	Username string `toml:"db_username"` // e.g. "postgres"
-	Password string `toml:"db_password"` // e.g. "password"
-	Database string `toml:"db_database"` // e.g. "postgres"
+	// Host is the database server hostname (default: "localhost")
+	Host string `toml:"db_host"`
+
+	// Port is the database server port (default: "5432")
+	Port string `toml:"db_port"`
+
+	// Username for database authentication
+	Username string `toml:"db_username"`
+
+	// Password for database authentication
+	Password string `toml:"db_password"`
+
+	// Database name to connect to
+	Database string `toml:"db_database"`
 }
 
 type SmartConfig struct {
-	ClientID          string `toml:"smart_client_id"`          // OAuth2 client ID from your SMART app registration
-	ClientSecret      string `toml:"smart_client_secret"`      // OAuth2 client secret from your SMART app registration
-	AuthURL           string `toml:"smart_auth_url"`           // Authorization endpoint URL from your IdP
-	TokenURL          string `toml:"smart_token_url"`          // Token endpoint URL from your IdP
-	CallbackURL       string `toml:"smart_callback_url"`       // OAuth2 callback URL (e.g. "https://localhost")
-	DatastoreEndpoint string `toml:"smart_datastore_endpoint"` // HealthLake FHIR endpoint URL
-	Scope             string `toml:"smart_scope"`              // OAuth2 scopes (e.g. "launch/patient patient/*.read")
-	GrantType         string `toml:"smart_grant_type"`         // OAuth2 grant type (e.g. "client_credentials")
-	// Runtime fields (not in TOML)
+	// ClientID from SMART app registration
+	ClientID string `toml:"smart_client_id"`
+
+	// ClientSecret from SMART app registration
+	ClientSecret string `toml:"smart_client_secret"`
+
+	// TokenURL for OAuth2 token endpoint
+	TokenURL string `toml:"smart_token_url"`
+
+	// DatastoreEndpoint for the FHIR server
+	DatastoreEndpoint string `toml:"smart_datastore_endpoint"`
+
+	// Scope for OAuth2 authentication
+	Scope string `toml:"smart_scope"`
+
+	// GrantType for OAuth2 (e.g., "client_credentials")
+	GrantType string `toml:"smart_grant_type"`
+
+	// Runtime fields
 	ExportJobId string `toml:"-"` // Tracks the export job ID
 }

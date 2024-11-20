@@ -42,6 +42,8 @@ For more information, check the FAQ section.
 
 Currently supports manual installation only. Homebrew support is coming soon.
 
+The script automatically detects your operating system and architecture, downloads the appropriate binary, and installs it to /usr/local/bin.
+
 ```sh
 curl -sSL https://raw.githubusercontent.com/TheMomentumAI/crossfhir/master/scripts/install.sh | bash
 ```
@@ -59,32 +61,33 @@ In the `example.config.toml` file, you can see a list of the required configurat
 
 ```toml
 [aws]
-# AWS credentials to access your account
-aws_access_key = "AKIA123123123..."
-aws_secret_key = "XWSWAD123123123..."
+# AWS credentials and configuration
+aws_access_key = "AKIA..."
+aws_secret_key = "Tdaz4e..."
 aws_region = "us-east-1"
-### Export ###
-# The name of the S3 bucket
-aws_s3_bucket = "s3://fhir-bucket"
-# The ARN of an IAM Role to conduct the export, which has access to S3, KMS, and HealthLake
-aws_iam_export_role = "arn:aws:iam::123:role/Role"
-# The ID of your HealthLake FHIR datastore
-aws_datastore_id = "123123123123"
-# The ARN of a KMS key that encrypts the S3 bucket (not that encrypts the HealthLake datastore)
-aws_kms_key_id_arn = "arn:aws:kms:region:123123123:key/123123123"
-# The export job name for tracking purposes
+aws_s3_bucket = "s3://my-bucket"
+aws_iam_export_role = "arn:aws:iam::123123123:role/IAMRole"
+aws_datastore_id = "8699acc...c49744168"
+aws_kms_key_id = "arn:aws:kms:us-east-1:123123123:key/749b1e97-85db-49af5"
 aws_export_job_name = "my-export-job"
-### Pull ###
-# The name of the S3 bucket
-aws_s3_bucket = "s3://fhir-bucket"
+aws_datastore_fhir_url = "https://healthlake.us-east-1.amazonaws.com"
 
-### Load ###
-# PostgreSQL database credentials
-# Also you can pass db_host and db_port if you are not using the default values which are localhost and 5432 respectively
 [db]
+# PostgreSQL database configuration
+db_host = "localhost"
+db_port = "5432"
 db_username = "postgres"
 db_password = "password"
 db_database = "postgres"
+
+[smart]
+# SMART on FHIR configuration
+smart_client_id = "123123123123"
+smart_client_secret = "12qwert123qwerty123"
+smart_token_url = "https://fhir.auth.us-east-1.amazoncognito.com/oauth2/token"
+smart_datastore_endpoint = "https://healthlake.us-east-1.amazonaws.com/datastore/123123/r4"
+smart_scope = "system/*.*"
+smart_grant_type = "client_credentials"
 ```
 
 If you want to work directly with the source code, you need to have Go installed on your machine.

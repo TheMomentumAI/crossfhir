@@ -54,6 +54,7 @@ func Execute() {
 	rootCmd.AddCommand(PullCmd())
 	rootCmd.AddCommand(LoadCmd())
 	rootCmd.AddCommand(RestCmd())
+	rootCmd.AddCommand(SqlCmd())
 
 	err := rootCmd.Execute()
 	if err != nil {

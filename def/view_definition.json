@@ -1,0 +1,23 @@
+{
+  "resourceType": "ViewDefinition",
+  "resource": "Patient",
+  "name": "patient_demographics",
+  "select": [{
+    "column": [
+      {"name": "patient_id", "path": "id"},
+      {"name": "gender", "path": "gender"},
+      {"name": "birth_date", "path": "birthDate"}
+    ],
+    "forEach": "name.where(use = 'official').first()",
+    "column": [
+      {"name": "given_name", "path": "given.first()"},
+      {"name": "family_name", "path": "family"}
+    ],
+    "forEach": "address.first()",
+    "column": [
+      {"name": "city", "path": "city"},
+      {"name": "state", "path": "state"},
+      {"name": "postal_code", "path": "postalCode"}
+    ]
+  }]
+}

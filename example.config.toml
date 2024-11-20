@@ -15,3 +15,11 @@ db_port = "5432"
 db_username = "postgres"
 db_password = "password"
 db_database = "postgres"
+
+[smart]
+smart_client_id = "123123123123"
+smart_client_secret = "12qwert123qwerty123"
+smart_token_url = "https://fhir.auth.us-east-1.amazoncognito.com/oauth2/token"
+smart_datastore_endpoint = "https://healthlake.us-east-1.amazonaws.com/datastore/123123/r4"
+smart_scope = "system/*.*"
+smart_grant_type = "client_credentials"

@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"crossfhir/internal"
+	"crossfhir/internal/helpers"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/spf13/cobra"
@@ -181,7 +181,7 @@ func validateLoadConfig() {
 }
 
 func RunFhirMigration(conn *pgx.Conn) error {
-	for _, sql := range internal.FhirSQLCommands {
+	for _, sql := range helpers.FhirSQLCommands {
 		// when verbose option is enabled, print the SQL command
 
 		_, err := conn.Exec(context.Background(), sql)

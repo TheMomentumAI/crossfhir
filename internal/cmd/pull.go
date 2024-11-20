@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"crossfhir/internal"
 	"fmt"
 	"log"
 	"os"
 	"sync"
+
+	"crossfhir/internal/helpers"
 
 	"github.com/spf13/cobra"
 )
@@ -30,20 +31,21 @@ func PullCmd() *cobra.Command {
 }
 
 func Pull(cmd *cobra.Command, args []string) error {
-	validatePullConfig()
 	PullFhirData()
 
 	return nil
 }
 
 func PullFhirData() error {
+	validatePullConfig()
+
 	// s3Url might be passed automatically from `export -p` command or explicitly from `pull` command
 	if s3Url != "" {
 		cfg.Aws.ExportJobS3Output = s3Url
 	}
 
-	bucket, prefix := internal.ParseS3Url(cfg.Aws.ExportJobS3Output)
-	objects, err := internal.ListPrefixObjects(s3Client, bucket, prefix)
+	bucket, prefix := helpers.ParseS3Url(cfg.Aws.ExportJobS3Output)
+	objects, err := helpers.ListPrefixObjects(s3Client, bucket, prefix)
 
 	log.Printf("Downloading %d FHIR data objects from S3 to local directory %s", len(objects), dir)
 
@@ -64,7 +66,7 @@ func PullFhirData() error {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			fileCounter++
-			if err := internal.DownloadS3Object(s3Client, bucket, *object.Key, dir); err != nil {
+			if err := helpers.DownloadS3Object(s3Client, bucket, *object.Key, dir); err != nil {
 				errChan <- err
 			}
 		}()

@@ -61,6 +61,31 @@ func (c *Converter) buildSelectClause(selects []SelectStruct) (string, error) {
 	return strings.Join(parts, "\n"), nil
 }
 
+func (c *Converter) processColumns(columns []Column) ([]string, error) {
+	var sqlColumns []string
+
+	for _, col := range columns {
+
+		//????
+		if col.Path == "" {
+			continue
+		}
+
+		sql, err := c.convertPathToSQL(col.Path)
+		if err != nil {
+			return nil, fmt.Errorf("error converting path '%s': %w", col.Path, err)
+		}
+
+		if col.Name != "" {
+			sql += fmt.Sprintf(" AS %s", col.Name)
+		}
+
+		sqlColumns = append(sqlColumns, sql)
+	}
+
+	return sqlColumns, nil
+}
+
 func (c *Converter) buildFromClause(resource string) string {
 	return fmt.Sprintf("FROM read_json_auto('%s.ndjson') as resource", strings.ToLower(resource))
 }
@@ -82,63 +107,24 @@ func (c *Converter) buildWhereClause(whereClauses []WhereStruct) (string, error)
 	return "WHERE " + c.indent(strings.Join(conditions, " AND\n"+c.indent(""))), nil
 }
 
-func (c *Converter) processColumns(columns []Column) ([]string, error) {
-	var sqlColumns []string
-
-	for _, col := range columns {
-		if col.Path == "" {
-			continue
-		}
-
-		sql, err := c.convertPathToSQL(col.Path)
-		if err != nil {
-			return nil, fmt.Errorf("error converting path '%s': %w", col.Path, err)
-		}
-
-		if col.Name != "" {
-			sql += fmt.Sprintf(" AS %s", col.Name)
-		}
-
-		sqlColumns = append(sqlColumns, sql)
-	}
-
-	return sqlColumns, nil
-}
-
 func (c *Converter) convertPathToSQL(path string) (string, error) {
-	// Handle special functions
 	switch {
 	case path == "getResourceKey()":
-		return "resource->>'id'", nil
+		return "resource['id']", nil
 	case strings.Contains(path, "getReferenceKey"):
-		return c.handleReferenceKey(path)
+		parts := strings.Split(path, ".")
+		referenceField := parts[0]
+		return fmt.Sprintf("json_extract(resource['%s']['reference'], '$.reference')", referenceField), nil
 	case strings.Contains(path, ".first()"):
-		return c.handleFirstFunction(path)
-	case strings.Contains(path, ".exists()"):
-		return c.handleExistsFunction(path)
+		basePath := strings.TrimSuffix(path, ".first()")
+		parts := strings.Split(basePath, ".")
+		jsonPath := strings.Join(parts, "']['")
+		return fmt.Sprintf("list_extract(resource['%s'], 1)", jsonPath), nil
 	default:
-		return c.handleStandardPath(path)
+		parts := strings.Split(path, ".")
+		jsonPath := strings.Join(parts, "']['")
+		return fmt.Sprintf("resource['%s']", jsonPath), nil
 	}
-}
-
-func (c *Converter) handleReferenceKey(path string) (string, error) {
-	parts := strings.Split(path, ".")
-	referenceField := parts[0]
-	return fmt.Sprintf("json_extract(resource->'%s'->>'reference', '$.reference')", referenceField), nil
-}
-
-func (c *Converter) handleFirstFunction(path string) (string, error) {
-	basePath := strings.TrimSuffix(path, ".first()")
-	return fmt.Sprintf("resource#>>'{%s,0}'", strings.ReplaceAll(basePath, ".", ",")), nil
-}
-
-func (c *Converter) handleExistsFunction(path string) (string, error) {
-	basePath := strings.TrimSuffix(path, ".exists()")
-	return fmt.Sprintf("resource#>>'{%s}' IS NOT NULL", strings.ReplaceAll(basePath, ".", ",")), nil
-}
-
-func (c *Converter) handleStandardPath(path string) (string, error) {
-	return fmt.Sprintf("resource#>>'{%s}'", strings.ReplaceAll(path, ".", ",")), nil
 }
 
 func (c *Converter) convertWhereExpression(expr string) (string, error) {
@@ -155,36 +141,30 @@ func (c *Converter) convertWhereExpression(expr string) (string, error) {
 		return strings.Join(conditions, " AND "), nil
 	}
 
-	// Handle exists() function
 	if strings.HasSuffix(expr, ".exists()") {
 		path := strings.TrimSuffix(expr, ".exists()")
-		return fmt.Sprintf("resource#>>'{%s}' IS NOT NULL", strings.ReplaceAll(path, ".", ",")), nil
+		parts := strings.Split(path, ".")
+		jsonPath := strings.Join(parts, "']['")
+		return fmt.Sprintf("resource['%s'] IS NOT NULL", jsonPath), nil
 	}
 
-	// Handle equality
 	if strings.Contains(expr, " = ") {
 		parts := strings.Split(expr, " = ")
-		if len(parts) != 2 {
-			return "", fmt.Errorf("invalid equality expression: %s", expr)
-		}
-
 		left := strings.TrimSpace(parts[0])
 		right := strings.TrimSpace(parts[1])
 
-		// Handle literal values
+		leftParts := strings.Split(left, ".")
+		jsonPath := strings.Join(leftParts, "']['")
+
 		if strings.HasPrefix(right, "'") && strings.HasSuffix(right, "'") {
-			return fmt.Sprintf("resource#>>'{%s}' = %s",
-				strings.ReplaceAll(left, ".", ","), right), nil
+			return fmt.Sprintf("resource['%s'] = %s", jsonPath, right), nil
 		}
 
-		// Handle boolean values
 		if right == "true" || right == "false" {
-			return fmt.Sprintf("(resource#>>'{%s}')::boolean = %s",
-				strings.ReplaceAll(left, ".", ","), right), nil
+			return fmt.Sprintf("CAST(resource['%s'] AS BOOLEAN) = %s", jsonPath, right), nil
 		}
 
-		return fmt.Sprintf("resource#>>'{%s}' = '%s'",
-			strings.ReplaceAll(left, ".", ","), right), nil
+		return fmt.Sprintf("resource['%s'] = '%s'", jsonPath, right), nil
 	}
 
 	return "", fmt.Errorf("unsupported where expression: %s", expr)

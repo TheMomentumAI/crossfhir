@@ -1,0 +1,3 @@
+{"active":true,"id":"pt1","name":[{"family":"F1"}],"resourceType":"Patient"}
+{"active":false,"id":"pt2","name":[{"family":"F2"}],"resourceType":"Patient"}
+{"id":"pt3","resourceType":"Patient"}

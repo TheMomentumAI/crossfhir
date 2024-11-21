@@ -1,0 +1,31 @@
+{
+  "resource": "Patient",
+  "name": "patient_demographics",
+  "select": [
+    {
+      "column": [
+        {
+          "name": "patient_id",
+          "path": "getResourceKey()"
+        },
+        {
+          "name": "gender",
+          "path": "gender"
+        },
+        {
+          "name": "dob",
+          "path": "birthDate"
+        },
+        {
+          "name": "active",
+          "path": "active"
+        }
+      ]
+    }
+  ],
+  "where": [
+    {
+      "path": "active = true"
+    }
+  ]
+}

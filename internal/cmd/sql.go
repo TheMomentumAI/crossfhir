@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"crossfhir/internal/converter"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
-
-	"crossfhir/internal/helpers"
+	"os"
 
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/spf13/cobra"
@@ -57,26 +58,26 @@ func RunQuery(cmd *cobra.Command, args []string) {
 }
 
 func Convert(cmd *cobra.Command, args []string) {
-	converter := helpers.NewConverter()
-
-	viewDef := helpers.ViewDefinition{
-		Resource: "Patient",
-		Name:     "patient_demographics",
-		Select: []helpers.SelectStruct{{
-			Column: []helpers.Column{
-				{Name: "patient_id", Path: "getResourceKey()"},
-				{Name: "gender", Path: "gender"},
-				{Name: "dob", Path: "birthDate"},
-			},
-		}},
+	// Read JSON file
+	data, err := os.ReadFile("vd/test.json")
+	if err != nil {
+		log.Fatalf("Error reading file: %v", err)
 	}
 
+	// Parse JSON into ViewDefinition
+	var viewDef converter.ViewDefinition
+	err = json.Unmarshal(data, &viewDef)
+	if err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+
+	// Convert to SQL
+	converter := converter.NewConverter()
 	sql, err := converter.ToSQL(viewDef)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(sql)
-
 }
 
 func SqlCmd() *cobra.Command {

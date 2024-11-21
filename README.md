@@ -15,7 +15,7 @@
 
 `crossfhir` is a CLI tool to interact with AWS HealthLake FHIR datastore and easily migrate it to PostgreSQL.
 
-## Features overview
+## Roadmap
 
 ### General features
 
@@ -37,6 +37,12 @@ For more information, check the FAQ section.
 - ✅ Migrating .ndjson files from FHIR v4 resources into specific tables.
 - Indexing desired elements of resources and separating them from the jsonb column.
 - Handling resource versioning and updates.
+
+### View Definitions
+
+- Generating SQL queries using FHIR View Definitions
+- Support running SQL .ndjson files in memory using DuckDB
+
 
 ## Installation
 
@@ -90,8 +96,6 @@ db_database = "postgres"
 If you want to work directly with the source code, you need to have Go installed on your machine.
 
 ## Usage
-
-There is a binary in this repository that you can use if you don't have Go installed.
 
 ```
 $ crossfhir

@@ -1,31 +1,26 @@
-{
-  "resource": "Patient",
-  "name": "patient_demographics",
-  "select": [
-    {
-      "column": [
-        {
-          "name": "patient_id",
-          "path": "getResourceKey()"
-        },
-        {
-          "name": "gender",
-          "path": "gender"
-        },
-        {
-          "name": "dob",
-          "path": "birthDate"
-        },
-        {
-          "name": "active",
-          "path": "active"
-        }
-      ]
-    }
-  ],
-  "where": [
-    {
-      "path": "active = true"
-    }
-  ]
-}
+[
+  {
+    "resourceType": "Patient",
+    "id": "pt1",
+    "name": [
+      {
+        "family": "F1"
+      }
+    ],
+    "active": true
+  },
+  {
+    "resourceType": "Patient",
+    "id": "pt2",
+    "name": [
+      {
+        "family": "F2"
+      }
+    ],
+    "active": false
+  },
+  {
+    "resourceType": "Patient",
+    "id": "pt3"
+  }
+]

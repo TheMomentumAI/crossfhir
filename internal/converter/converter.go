@@ -11,6 +11,13 @@ func NewConverter() *Converter {
 	}
 }
 
+// parse vd
+// build select for each of select object
+	// handle .first() .exists() .forEach() etc.
+// build from cause
+// build where cause
+
+
 // ToSQL converts a ViewDefinition to a SQL query string
 func (c *Converter) ToSQL(vd ViewDefinition) (string, error) {
 	if err := c.validate(vd); err != nil {
@@ -20,7 +27,7 @@ func (c *Converter) ToSQL(vd ViewDefinition) (string, error) {
 	var queryParts []string
 
 	// Process SELECT clause
-	selectClause, err := c.buildSelectClause(vd.Select)
+	selectClause, err := c.Select(vd.Select)
 	if err != nil {
 		return "", fmt.Errorf("error building SELECT clause: %w", err)
 	}
@@ -29,19 +36,19 @@ func (c *Converter) ToSQL(vd ViewDefinition) (string, error) {
 	// FROM clause
 	queryParts = append(queryParts, c.buildFromClause(vd.Resource))
 
-	// WHERE clause
-	if len(vd.Where) > 0 {
-		whereClause, err := c.buildWhereClause(vd.Where)
-		if err != nil {
-			return "", fmt.Errorf("error building WHERE clause: %w", err)
-		}
-		queryParts = append(queryParts, whereClause)
-	}
+	// // WHERE clause
+	// if len(vd.Where) > 0 {
+	// 	whereClause, err := c.Where(vd.Where)
+	// 	if err != nil {
+	// 		return "", fmt.Errorf("error building WHERE clause: %w", err)
+	// 	}
+	// 	queryParts = append(queryParts, whereClause)
+	// }
 
 	return strings.Join(queryParts, "\n") + ";", nil
 }
 
-func (c *Converter) buildSelectClause(selects []SelectStruct) (string, error) {
+func (c *Converter) Select(selects []SelectStruct) (string, error) {
 	if len(selects) == 0 {
 		return "", fmt.Errorf("at least one select statement is required")
 	}
@@ -50,7 +57,7 @@ func (c *Converter) buildSelectClause(selects []SelectStruct) (string, error) {
 	columns := []string{}
 
 	for _, sel := range selects {
-		cols, err := c.processColumns(sel.Column)
+		cols, err := c.processColumn(sel.Column)
 		if err != nil {
 			return "", err
 		}
@@ -61,12 +68,11 @@ func (c *Converter) buildSelectClause(selects []SelectStruct) (string, error) {
 	return strings.Join(parts, "\n"), nil
 }
 
-func (c *Converter) processColumns(columns []Column) ([]string, error) {
+func (c *Converter) processColumn(columns []Column) ([]string, error) {
 	var sqlColumns []string
 
 	for _, col := range columns {
-
-		//????
+		// check
 		if col.Path == "" {
 			continue
 		}
@@ -86,90 +92,33 @@ func (c *Converter) processColumns(columns []Column) ([]string, error) {
 	return sqlColumns, nil
 }
 
-func (c *Converter) buildFromClause(resource string) string {
-	return fmt.Sprintf("FROM read_json_auto('%s.ndjson') as resource", strings.ToLower(resource))
-}
-
-func (c *Converter) buildWhereClause(whereClauses []WhereStruct) (string, error) {
-	if len(whereClauses) == 0 {
-		return "", nil
-	}
-
-	var conditions []string
-	for _, clause := range whereClauses {
-		condition, err := c.convertWhereExpression(clause.Path)
-		if err != nil {
-			return "", err
-		}
-		conditions = append(conditions, condition)
-	}
-
-	return "WHERE " + c.indent(strings.Join(conditions, " AND\n"+c.indent(""))), nil
-}
-
 func (c *Converter) convertPathToSQL(path string) (string, error) {
 	switch {
-	case path == "getResourceKey()":
-		return "resource['id']", nil
-	case strings.Contains(path, "getReferenceKey"):
-		parts := strings.Split(path, ".")
-		referenceField := parts[0]
-		return fmt.Sprintf("json_extract(resource['%s']['reference'], '$.reference')", referenceField), nil
 	case strings.Contains(path, ".first()"):
 		basePath := strings.TrimSuffix(path, ".first()")
 		parts := strings.Split(basePath, ".")
-		jsonPath := strings.Join(parts, "']['")
-		return fmt.Sprintf("list_extract(resource['%s'], 1)", jsonPath), nil
+
+		// for "name.family.first()" return  resource->>'$.name[0].family'
+		return fmt.Sprintf("resource->>'$.%s[0].%s'", parts[0], strings.Join(parts[1:], ".")), nil
+
+		// For literal string values like 'A'
+	case strings.HasPrefix(path, "'") && strings.HasSuffix(path, "'"):
+
+		return path, nil
+
 	default:
-		parts := strings.Split(path, ".")
-		jsonPath := strings.Join(parts, "']['")
-		return fmt.Sprintf("resource['%s']", jsonPath), nil
+		elements := strings.Split(path, ".")
+		return fmt.Sprintf("resource->>'$.%s'", strings.Join(elements, ".")), nil
 	}
 }
 
-func (c *Converter) convertWhereExpression(expr string) (string, error) {
-	if strings.Contains(expr, " and ") {
-		parts := strings.Split(expr, " and ")
-		conditions := make([]string, len(parts))
-		for i, part := range parts {
-			converted, err := c.convertWhereExpression(strings.TrimSpace(part))
-			if err != nil {
-				return "", err
-			}
-			conditions[i] = converted
-		}
-		return strings.Join(conditions, " AND "), nil
-	}
-
-	if strings.HasSuffix(expr, ".exists()") {
-		path := strings.TrimSuffix(expr, ".exists()")
-		parts := strings.Split(path, ".")
-		jsonPath := strings.Join(parts, "']['")
-		return fmt.Sprintf("resource['%s'] IS NOT NULL", jsonPath), nil
-	}
-
-	if strings.Contains(expr, " = ") {
-		parts := strings.Split(expr, " = ")
-		left := strings.TrimSpace(parts[0])
-		right := strings.TrimSpace(parts[1])
-
-		leftParts := strings.Split(left, ".")
-		jsonPath := strings.Join(leftParts, "']['")
-
-		if strings.HasPrefix(right, "'") && strings.HasSuffix(right, "'") {
-			return fmt.Sprintf("resource['%s'] = %s", jsonPath, right), nil
-		}
-
-		if right == "true" || right == "false" {
-			return fmt.Sprintf("CAST(resource['%s'] AS BOOLEAN) = %s", jsonPath, right), nil
-		}
-
-		return fmt.Sprintf("resource['%s'] = '%s'", jsonPath, right), nil
-	}
-
-	return "", fmt.Errorf("unsupported where expression: %s", expr)
+// FROM
+func (c *Converter) buildFromClause(resource string) string {
+	// todo resource from *?
+	return fmt.Sprintf("FROM read_json_auto('%s.ndjson') as resource", strings.ToLower(resource))
 }
 
+// HELPERS
 func (c *Converter) validate(vd ViewDefinition) error {
 	if vd.Resource == "" {
 		return fmt.Errorf("resource is required")

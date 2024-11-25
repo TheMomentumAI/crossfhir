@@ -90,6 +90,11 @@ func TestToSQL(t *testing.T) {
 						t.Fatalf("Error marshaling expected results: %v", err)
 					}
 
+					fmt.Println("Got:")
+					fmt.Println(string(got))
+					fmt.Println("Want:")
+					fmt.Println(string(want))
+
 					if got != string(want) {
 						// t.Errorf("\nExpected:\n%s\nGot:\n%s", string(want), got)
 						t.Errorf("Results do not match")

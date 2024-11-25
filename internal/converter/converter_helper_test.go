@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 )
 
 // TestSuite represents the complete test suite structure
@@ -89,59 +90,82 @@ func LoadDuckDB(resources []interface{}, tempDir string, testName string) (*sql.
 	return db, nil
 }
 
-// Convert sql.Rows to JSON string
 func resultsToJSON(rows *sql.Rows) (string, error) {
-	// Get columns
 	columns, err := rows.Columns()
 	if err != nil {
-		return "", fmt.Errorf("error getting columns: %w", err)
+		return "", fmt.Errorf("failed to get columns: %w", err)
 	}
 
-	// Collect all results
-	var results []map[string]interface{}
+	results := make([]map[string]interface{}, 0)
+	types, err := rows.ColumnTypes()
+
+	// // print types as strings
+	// for _, t := range types {
+	// 	fmt.Println(t.DatabaseTypeName())
+	// }
+
+	if err != nil {
+		return "", fmt.Errorf("failed to get column types: %w", err)
+	}
+
 	for rows.Next() {
-		// Create value holders
-		values := make([]interface{}, len(columns))
-		valuePointers := make([]interface{}, len(columns))
-		for i := range values {
-			valuePointers[i] = &values[i]
-		}
-
-		// Scan row
-		if err := rows.Scan(valuePointers...); err != nil {
-			return "", fmt.Errorf("error scanning row: %w", err)
-		}
-
-		// Create row map
-		row := make(map[string]interface{})
-		for i, col := range columns {
-			if values[i] == nil {
-				row[col] = nil
-				continue
-			}
-
-			// Handle specific types
-			switch v := values[i].(type) {
-			case []byte:
-				row[col] = string(v)
-			case int64:
-				if col == "active" { // Special handling for boolean fields
-					row[col] = v == 1
-				} else {
-					row[col] = v
-				}
-			default:
-				row[col] = v
-			}
+		row, err := scanRow(rows, columns, types)
+		if err != nil {
+			return "", err
 		}
 		results = append(results, row)
 	}
 
-	// Convert to JSON string
+	if err = rows.Err(); err != nil {
+		return "", fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	jsonData, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
-		return "", fmt.Errorf("error marshaling results to JSON: %w", err)
+		return "", fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
 	return string(jsonData), nil
+}
+
+func scanRow(rows *sql.Rows, columns []string, types []*sql.ColumnType) (map[string]interface{}, error) {
+	values := make([]interface{}, len(columns))
+	for i := range values {
+		values[i] = new(interface{})
+	}
+
+	if err := rows.Scan(values...); err != nil {
+		return nil, fmt.Errorf("failed to scan row: %w", err)
+	}
+
+	row := make(map[string]interface{}, len(columns))
+	for i, col := range columns {
+		val := reflect.ValueOf(values[i]).Elem().Interface()
+		if val == nil {
+			row[col] = nil
+			continue
+		}
+
+		switch v := val.(type) {
+		case []byte:
+			// Handle text fields
+			row[col] = string(v)
+		case int64:
+			row[col] = v
+		case float64:
+			row[col] = v
+		case string:
+			if v == "true" {
+				row[col] = v == "true"
+			} else if v == "false" {
+				row[col] = v == "true"
+			} else {
+				row[col] = v
+			}
+		default:
+			row[col] = v
+		}
+	}
+
+	return row, nil
 }

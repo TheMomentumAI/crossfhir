@@ -9,5 +9,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
 
+  duckdb:
+    image: datacatering/duckdb:v1.1.1
+    volumes:
+      - ./tmp/duckdb:/data
+    ports:
+      - "4000:4000"
+    environment:
+      - DUCKDB_ALLOW_UNSIGNED=1
+
 volumes:
   postgres_data:

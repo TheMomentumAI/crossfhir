@@ -1,0 +1,139 @@
+FhirPath
+	= first:Segment rest:DelimitedSegment* {
+		return [first].concat(rest)
+	}
+
+
+DelimitedSegment
+	= "." s:Segment {
+		return s
+	}
+
+Segment
+	= (
+		ExtensionShortcut /
+		SimpleFn /
+		WhereSegment /
+		ExistsSegment /
+		JoinFn /
+		MemberOfFn /
+		NavSegment
+	)
+
+NavSegment
+	= body:$([^.\(\)\[\]\= \t]+) type:OfTypeFilter? array:"[]"? {
+		type = type ? type[0].toUpperCase() + type.slice(1) : "";
+		return {
+			type: "nav",
+			array: array ? true : null,
+			value: body + type
+		}
+	}
+
+OfTypeFilter
+	= ".ofType(" _ typeValue:$([^)]+) _ ")" {
+		return typeValue
+	}
+
+WhereSegment
+	= "where(" _ criteria: CriteriaOr _ ")" {
+		return {
+			type: "where",
+			criteria
+		}
+	}
+
+ExistsSegment
+	= "exists(" _ criteria: CriteriaOr _ ")" {
+		return {
+			type: "exists",
+			criteria
+		}
+	}
+
+CriteriaOr
+	= head:CriteriaAnd tail:( _ "or"i _ CriteriaAnd)* {
+		return tail.reduce(function(result, element) {
+			return {type: 'criteria_or', left: result, right: element[3]};
+		}, head);
+	}
+
+CriteriaAnd
+	= head:CriteriaGroup tail:( _ "and"i _ CriteriaGroup)* {
+		return tail.reduce(function(result, element) {
+			return {type: 'criteria_and', left: result, right: element[3]};
+		}, head);
+	}
+
+CriteriaGroup
+	= "(" _ expr:CriteriaOr _ ")" {
+		return {
+				type: "criteria_group",
+				criteria: expr
+			}
+		}
+	/ Criteria
+
+Criteria
+	= Comparison /
+	p:FhirPath { return { type: "path", path: p} }
+
+Comparison
+	= path:FhirPath _ comparator:Comparator _ value:(StringValue / NumericValue) {
+		return {
+			type: "comparison",
+			path,
+			comparator,
+			value
+		}
+	}
+
+ExtensionShortcut
+	= "extension(" _ [']? value:$([^\)]+) [']? ")" {
+		return {
+			type: "nav",
+			value: "extension",
+			array: true,
+			url: value
+		}
+	}
+
+JoinFn
+	= "join(" _ value:StringValue? _ ")" {
+		return {
+			type: "join()",
+			value: value || "','"
+		}
+	}
+
+StringValue
+	= "'" value:$([^']*) "'" {
+		return "'" + value + "'"
+	}
+
+NumericValue
+	= num:$([0-9]+) dec:$("." [0-9]+)? {
+		return num +
+			(dec ? "." + dec[1] : "")
+	}
+
+MemberOfFn
+	= "memberOf(" _ [']? value:$([^\)]+) [']? ")" {
+		return {
+			type: "member_of_fn", value
+		}
+	}
+
+Comparator
+	= "=" / "!=" / "<=" / ">=" / "<" /  ">"
+
+SimpleFn
+	= name:("first()" / "empty()" / "exists()" / "getId()" / "getIdType()") {
+		return {
+			type: "fn",
+			name
+		}
+	}
+
+_ "whitespace"
+  = [ \t\n\r]*

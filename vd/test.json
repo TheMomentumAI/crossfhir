@@ -1,26 +1,16 @@
-[
-  {
-    "resourceType": "Patient",
-    "id": "pt1",
-    "name": [
-      {
-        "family": "F1"
-      }
-    ],
-    "active": true
+{
+  "constant": [{
+    "name": "bp_code",
+    "value": "8480-6"
   },
   {
-    "resourceType": "Patient",
-    "id": "pt2",
-    "name": [
-      {
-        "family": "F2"
-      }
-    ],
-    "active": false
-  },
-  {
-    "resourceType": "Patient",
-    "id": "pt3"
+    "name": "bp_code2",
+    "valueCode": "8480-611"
   }
-]
+],
+  "resource": "Patient",
+  "select": [
+    {"path": "id"},
+    {"path": "name.first().family"}
+  ]
+}

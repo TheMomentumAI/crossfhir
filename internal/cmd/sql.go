@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	"crossfhir/internal/converter"
+
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +17,7 @@ func configDuckDb() *sql.DB {
 		log.Fatal(err)
 	}
 
-	// Configure S3
+	// Configure S3 d
 	if _, err := db.Exec(`
 				INSTALL httpfs;
 				LOAD httpfs;
@@ -54,31 +56,8 @@ func RunQuery(cmd *cobra.Command, args []string) {
 	fmt.Printf("Total patients: %d\n", count)
 }
 
-func Convert(cmd *cobra.Command, args []string) {
-	// Read JSON file
-	// data, err := os.ReadFile("vd/test.json")
-	// if err != nil {
-	// 	log.Fatalf("Error reading file: %v", err)
-	// }
-
-	// // Parse JSON into ViewDefinition
-	// var viewDef converter.ViewDefinition
-	// err = json.Unmarshal(data, &viewDef)
-	// if err != nil {
-	// 	log.Fatalf("Error parsing JSON: %v", err)
-	// }
-
-	// // Convert to SQL
-	// converter := converter.NewConverter()
-	// sql, err := converter.ToSQL(viewDef)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(sql)
-}
-
-func Parser(cmd *cobra.Command, args []string) {
-
+func Test(cmd *cobra.Command, args []string) {
+	converter.Convert()
 }
 
 func SqlCmd() *cobra.Command {
@@ -86,7 +65,7 @@ func SqlCmd() *cobra.Command {
 		Use:   "sql",
 		Short: "SQL commands",
 		Long:  `SQL commands`,
-		Run:   Parser,
+		Run:   Test,
 	}
 
 	return SqlCmd

@@ -53,7 +53,6 @@ func Execute() {
 	rootCmd.AddCommand(ExportCmd())
 	rootCmd.AddCommand(PullCmd())
 	rootCmd.AddCommand(LoadCmd())
-	rootCmd.AddCommand(RestCmd())
 
 	err := rootCmd.Execute()
 	if err != nil {

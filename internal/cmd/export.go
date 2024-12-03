@@ -41,6 +41,21 @@ type S3Configuration struct {
 	KmsKeyId string `json:"KmsKeyId"`
 }
 
+// ExportCmd is responsible for handling FHIR data exports.
+//
+// Usage:
+//
+//	crossfhir export [flags]
+//
+// Flags:
+//
+//	-p, --pull        Pull data after export
+//	-d, --dir         Directory to save exported data (default: "./fhir-data")
+//	    --aws         Use AWS credentials for export
+//
+// Example:
+//
+//	crossfhir export --pull --dir ./mydirectory
 func ExportCmd() *cobra.Command {
 	ExportCmd := &cobra.Command{
 		Use:   "export",
@@ -55,6 +70,12 @@ func ExportCmd() *cobra.Command {
 	return ExportCmd
 }
 
+// Export handles the main export logic and determines whether to use
+// AWS credentials or SMART on FHIR authentication based on the flags.
+//
+// The function supports two authentication methods:
+//   - AWS credentials using static credentials
+//   - SMART on FHIR using OAuth2 client credentials
 func Export(cmd *cobra.Command, args []string) error {
 	if awsExport {
 		return ExportAws(cmd, args)
@@ -63,6 +84,14 @@ func Export(cmd *cobra.Command, args []string) error {
 	}
 }
 
+// ExportSmart initiates a FHIR data export using SMART on FHIR authentication and REST API.
+//
+// The function performs the following steps:
+//  1. Validates the SMART configuration variables
+//  2. Obtains an OAuth2 token
+//  3. Initiates the export job
+//  4. Monitors the export progress
+//  5. Optionally pulls the exported data locally (if the --pull flag is set)
 func ExportSmart(cmd *cobra.Command, args []string) error {
 	validateSmartConfig()
 
@@ -146,6 +175,13 @@ func ExportSmart(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// ExportAws initiates a FHIR data export using AWS credentials.
+//
+// The function performs the following steps:
+//  1. Validates the AWS configuration variables
+//  2. Creates an export job using the AWS HealthLake SDK
+//  3. Monitors the export progress
+//  5. Optionally pulls the exported data locally (if the --pull flag is set)
 func ExportAws(cmd *cobra.Command, args []string) error {
 	validateAwsConfig()
 
@@ -186,7 +222,7 @@ func ExportAws(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// HELPERS //
+// HELPER FUNCTIONS //
 
 func extractJobId(locationUrl string) string {
 	if locationUrl == "" {
@@ -283,7 +319,13 @@ func monitorExportProgressAws() error {
 	return nil
 }
 
-// VALIDATION //
+// VALIDATION FUNCTIONS //
+
+// Required configuration values:
+//   - ClientID
+//   - ClientSecret
+//   - TokenURL
+//   - DatastoreEndpoint
 func validateSmartConfig() {
 	missingEnvs := []string{}
 
@@ -309,6 +351,16 @@ func validateSmartConfig() {
 	}
 }
 
+// Required configuration values for AWS export:
+//   - AccessKey
+//   - SecretKey
+//   - Region
+//   - S3Bucket
+//   - IAMExportRole
+//   - DatastoreId
+//   - KmsKeyId
+//   - ExportJobName
+//   - DatastoreFHIRUrl
 func validateAwsConfig() {
 	missingEnvs := []string{}
 

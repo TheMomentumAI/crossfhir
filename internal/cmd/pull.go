@@ -15,6 +15,21 @@ var (
 	s3Url string
 )
 
+
+// PullCmd is responsible for handling FHIR data downloads from S3.
+//
+// The command supports concurrent downloads with a default limit of 10 concurrent operations.
+// It automatically creates the destination directory if it doesn't exist and handles
+// both individual file downloads and bulk transfers.
+//
+// Usage:
+//
+//	crossfhir pull [flags]
+//
+// Flags:
+//
+//	-u, --url        URL of the S3 bucket to pull FHIR data from (required)
+//	-d, --dir        Directory to save FHIR data (default: "./fhir-data")
 func PullCmd() *cobra.Command {
 	PullCmd := &cobra.Command{
 		Use:   "pull",
@@ -36,10 +51,23 @@ func Pull(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// PullFhirData downloads FHIR data from an S3 bucket to local storage.
+//
+// The function performs the following steps:
+//  1. Validates the pull configuration
+//  2. Lists all objects in the specified S3 location
+//  3. Downloads files concurrently with rate limiting
+//  4. Creates the local directory structure as needed
+//
+// The function uses a worker pool pattern to handle concurrent downloads
+// while maintaining a maximum of 10 concurrent operations to prevent
+// overwhelming system resources.
+// This function can be also triggered automatically by the `export -p` command.
+// In this case, the S3 URL is passed automatically from the export command.
+// While running the `pull` command, the S3 URL must be passed explicitly.
 func PullFhirData() error {
 	validatePullConfig()
 
-	// s3Url might be passed automatically from `export -p` command or explicitly from `pull` command
 	if s3Url != "" {
 		cfg.Aws.ExportJobS3Output = s3Url
 	}
@@ -56,7 +84,8 @@ func PullFhirData() error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(objects))
 
-	sem := make(chan struct{}, 10) // Limit to 10 concurrent goroutines
+	// Limit to 10 concurrent downloads
+	sem := make(chan struct{}, 10)
 	fileCounter := 0
 
 	for _, object := range objects {
@@ -85,6 +114,11 @@ func PullFhirData() error {
 	return nil
 }
 
+// Required configuration values for AWS S3 pull action:
+//   - AWS Access Key
+//   - AWS Secret Key
+//   - AWS Region
+//   - S3 Bucket
 func validatePullConfig() {
 	missingEnvs := []string{}
 
